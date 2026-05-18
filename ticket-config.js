@@ -38,9 +38,9 @@ const TICKET_CONFIG = {
       },
       menu: {
         preciosPorDia: {
+          martes: 0,
           miercoles: 0,
           viernes: 0,
-          sabado: 0,
           domingo: 0
         }
       },
@@ -266,9 +266,9 @@ const TICKET_CONFIG = {
     // Menú
     if (data.menu > 0) {
       const menuPrices = {
+        martes: prices.precioMenuMartes || 0,
         miercoles: prices.precioMenuMiercoles || 0,
         viernes: prices.precioMenuViernes || 0,
-        sabado: prices.precioMenuSabado || 0,
         domingo: prices.precioMenuDomingo || 0
       };
       const menuPrice = menuPrices[mode] || 0;
@@ -359,9 +359,9 @@ const TICKET_CONFIG = {
 
     if (data.menu) {
       const menuPrices = {
+        martes: prices.precioMenuMartes || 0,
         miercoles: prices.precioMenuMiercoles || 0,
         viernes: prices.precioMenuViernes || 0,
-        sabado: prices.precioMenuSabado || 0,
         domingo: prices.precioMenuDomingo || 0
       };
       total += data.menu * (menuPrices[mode] || 0);

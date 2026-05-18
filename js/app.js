@@ -20,9 +20,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     const priceMenuSection        = document.getElementById('price-menu-section');
     const priceCustomPizzaSection = document.getElementById('price-custom-pizza-section');
     const priceMenuMiercolesWrapper = document.getElementById('price-menu-miercoles-wrapper');
-    const priceMenuViernesWrapper   = document.getElementById('price-menu-viernes-wrapper');
-    const priceMenuSabadoWrapper    = document.getElementById('price-menu-sabado-wrapper');
-    const priceMenuDomingoWrapper   = document.getElementById('price-menu-domingo-wrapper');
+    const priceMenuMartesWrapper     = document.getElementById('price-menu-martes-wrapper');
+    const priceMenuViernesWrapper    = document.getElementById('price-menu-viernes-wrapper');
+    const priceMenuDomingoWrapper    = document.getElementById('price-menu-domingo-wrapper');
 
     // Modales
     const orderModal               = document.getElementById('order-modal');
@@ -78,8 +78,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     const priceEmpanadaInput       = document.getElementById('price-empanada');
     const pricePostreInput         = document.getElementById('price-postre');
     const priceMenuMiercolesInput  = document.getElementById('price-menu-miercoles');
+    const priceMenuMartesInput     = document.getElementById('price-menu-martes');
     const priceMenuViernesInput    = document.getElementById('price-menu-viernes');
-    const priceMenuSabadoInput     = document.getElementById('price-menu-sabado');
     const priceMenuDomingoInput    = document.getElementById('price-menu-domingo');
     const beveragesPricesList      = document.getElementById('beverages-prices-list');
     const newBeverageNameInput     = document.getElementById('new-beverage-name');
@@ -161,23 +161,22 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // ── MODO UI ───────────────────────────────────────────────────────────────
     function updateUIMode(mode) {
-        const isJueves = mode === 'jueves';
-        const isSabado = mode === 'sabado';
+        const isPizzaLibre = mode === 'jueves' || mode === 'sabado';
 
-        pizzaLibreSection.style.display         = (isJueves || isSabado) ? 'block' : 'none';
-        menuSection.style.display               = (isJueves || isSabado) ? 'none'  : 'block';
-        customPizzaBuilderSection.style.display = isSabado ? 'block' : 'none';
+        pizzaLibreSection.style.display         = isPizzaLibre ? 'block' : 'none';
+        menuSection.style.display               = isPizzaLibre ? 'none'  : 'block';
+        customPizzaBuilderSection.style.display = isPizzaLibre ? 'block' : 'none';
 
-        pricePizzaSection.style.display       = (isJueves || isSabado) ? 'block' : 'none';
-        priceMenuSection.style.display        = (isJueves || isSabado) ? 'none'  : 'block';
-        priceCustomPizzaSection.style.display = isSabado ? 'block' : 'none';
+        pricePizzaSection.style.display       = isPizzaLibre ? 'block' : 'none';
+        priceMenuSection.style.display        = isPizzaLibre ? 'none'  : 'block';
+        priceCustomPizzaSection.style.display = isPizzaLibre ? 'block' : 'none';
 
-        [priceMenuMiercolesWrapper, priceMenuViernesWrapper,
-         priceMenuSabadoWrapper,    priceMenuDomingoWrapper].forEach(w => { if (w) w.style.display = 'none'; });
+        [priceMenuMartesWrapper, priceMenuMiercolesWrapper,
+         priceMenuViernesWrapper, priceMenuDomingoWrapper].forEach(w => { if (w) w.style.display = 'none'; });
 
+        if (mode === 'martes'    && priceMenuMartesWrapper)    priceMenuMartesWrapper.style.display    = 'block';
         if (mode === 'miercoles' && priceMenuMiercolesWrapper) priceMenuMiercolesWrapper.style.display = 'block';
         if (mode === 'viernes'   && priceMenuViernesWrapper)   priceMenuViernesWrapper.style.display   = 'block';
-        if (mode === 'sabado'    && priceMenuSabadoWrapper)    priceMenuSabadoWrapper.style.display    = 'block';
         if (mode === 'domingo'   && priceMenuDomingoWrapper)   priceMenuDomingoWrapper.style.display   = 'block';
     }
 
@@ -394,9 +393,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         pricePizzaLibreGInput.value   = appState.prices.pizzaLibreG || 0;
         priceEmpanadaInput.value      = appState.prices.empanada;
         pricePostreInput.value        = appState.prices.precioPostre;
+        priceMenuMartesInput.value    = appState.prices.precioMenuMartes;
         priceMenuMiercolesInput.value = appState.prices.precioMenuMiercoles;
         priceMenuViernesInput.value   = appState.prices.precioMenuViernes;
-        priceMenuSabadoInput.value    = appState.prices.precioMenuSabado;
         priceMenuDomingoInput.value   = appState.prices.precioMenuDomingo;
         renderBeveragePrices();
         renderCustomPizzaPrices();
@@ -447,7 +446,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (dM > 0) parts.push(`+${dM} Libre Mujeres`);
             if (dG > 0) parts.push(`+${dG} Libre General`);
         }
-        if (mode === 'sabado') {
+        if (mode === 'jueves' || mode === 'sabado') {
             const dP = (newOrder.pizzasPersonalizadas?.length||0) - (oldOrder.pizzasPersonalizadas?.length||0);
             if (dP > 0) parts.push(`+${dP} Pizzas Nuevas (Ver detalle en app)`);
         }
@@ -466,9 +465,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     // ── IMPRESIÓN ─────────────────────────────────────────────────────────────
     function getMenuPrice() {
         const m = appState.currentMode;
+        if (m === 'martes')    return appState.prices.precioMenuMartes;
         if (m === 'miercoles') return appState.prices.precioMenuMiercoles;
         if (m === 'viernes')   return appState.prices.precioMenuViernes;
-        if (m === 'sabado')    return appState.prices.precioMenuSabado;
         if (m === 'domingo')   return appState.prices.precioMenuDomingo;
         return 0;
     }
@@ -786,9 +785,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         appState.prices.pizzaLibreG          = parseFloat(pricePizzaLibreGInput.value)   || 0;
         appState.prices.empanada             = parseFloat(priceEmpanadaInput.value)      || 0;
         appState.prices.precioPostre         = parseFloat(pricePostreInput.value)        || 0;
+        appState.prices.precioMenuMartes     = parseFloat(priceMenuMartesInput.value)    || 0;
         appState.prices.precioMenuMiercoles  = parseFloat(priceMenuMiercolesInput.value) || 0;
         appState.prices.precioMenuViernes    = parseFloat(priceMenuViernesInput.value)   || 0;
-        appState.prices.precioMenuSabado     = parseFloat(priceMenuSabadoInput.value)    || 0;
         appState.prices.precioMenuDomingo    = parseFloat(priceMenuDomingoInput.value)   || 0;
 
         document.querySelectorAll('#beverages-prices-list .bev-price-input').forEach(input => {

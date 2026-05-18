@@ -140,6 +140,7 @@
             <div class="mb-4">
                 <label for="mode-switcher" class="block text-sm font-medium text-gray-700 mb-1">Modo de Operación</label>
                 <select id="mode-switcher" class="w-full p-2 border border-gray-300 rounded-lg">
+                    <option value="martes">Martes</option>
                     <option value="miercoles">Miércoles</option>
                     <option value="jueves">Jueves</option>
                     <option value="viernes">Viernes</option>
@@ -231,6 +232,18 @@
                         </div>
                     </div>
 
+                    <!-- SECCIÓN MENÚ -->
+                    <div id="menu-section" class="bg-gray-100 p-4 rounded-lg">
+                        <h3 class="font-semibold mb-2">🍽️ Menú</h3>
+                        <div class="flex items-center justify-between mt-6">
+                            <span class="text-lg">Personas</span>
+                            <div class="flex items-center space-x-3">
+                                <button data-type="menu" data-action="decrease" class="op-btn bg-red-500 text-white rounded-full w-8 h-8 font-bold text-xl">-</button>
+                                <span id="menu-count" class="text-xl font-bold w-10 text-center">0</span>
+                                <button data-type="menu" data-action="increase" class="op-btn bg-green-500 text-white rounded-full w-8 h-8 font-bold text-xl">+</button>
+                            </div>
+                        </div>
+                    </div>
                     <!-- SECCIÓN MENORES (Siempre Visible) -->
                     <div id="menores-section" class="bg-gray-100 p-4 rounded-lg">
                         <h3 class="font-semibold mb-2">🧒 Menores</h3>
@@ -246,18 +259,6 @@
                             <div>
                                 <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Precio por Menor</label>
                                 <input type="number" id="menor-price-input" placeholder="$ 0.00" class="w-full p-2 border border-gray-300 rounded-lg text-center font-bold" step="0.01" min="0">
-                            </div>
-                        </div>
-                    </div>
-                    <!-- SECCIÓN MENÚ -->
-                    <div id="menu-section" class="bg-gray-100 p-4 rounded-lg">
-                        <h3 class="font-semibold mb-2">🍽️ Menú</h3>
-                        <div class="flex items-center justify-between mt-6">
-                            <span class="text-lg">Personas</span>
-                            <div class="flex items-center space-x-3">
-                                <button data-type="menu" data-action="decrease" class="op-btn bg-red-500 text-white rounded-full w-8 h-8 font-bold text-xl">-</button>
-                                <span id="menu-count" class="text-xl font-bold w-10 text-center">0</span>
-                                <button data-type="menu" data-action="increase" class="op-btn bg-green-500 text-white rounded-full w-8 h-8 font-bold text-xl">+</button>
                             </div>
                         </div>
                     </div>
@@ -374,13 +375,13 @@
                         <label class="block font-semibold mb-1">Menú Miércoles</label>
                         <input type="number" id="price-menu-miercoles" class="w-full p-2 border rounded-lg">
                     </div>
+                    <div id="price-menu-martes-wrapper">
+                        <label class="block font-semibold mb-1">Menú Martes</label>
+                        <input type="number" id="price-menu-martes" class="w-full p-2 border rounded-lg">
+                    </div>
                     <div id="price-menu-viernes-wrapper">
                         <label class="block font-semibold mb-1">Menú Viernes</label>
                         <input type="number" id="price-menu-viernes" class="w-full p-2 border rounded-lg">
-                    </div>
-                    <div id="price-menu-sabado-wrapper">
-                        <label class="block font-semibold mb-1">Menú Sábado</label>
-                        <input type="number" id="price-menu-sabado" class="w-full p-2 border rounded-lg">
                     </div>
                     <div id="price-menu-domingo-wrapper">
                         <label class="block font-semibold mb-1">Menú Domingo</label>

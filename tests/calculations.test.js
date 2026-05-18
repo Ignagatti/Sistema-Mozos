@@ -34,8 +34,7 @@ function assertClose(actual, expected, tolerance = 0.01) {
 const prices = {
     pizzaLibreH: 10000, pizzaLibreM: 9000, pizzaLibreG: 9500,
     empanada: 500, precioPostre: 1000,
-    precioMenuMiercoles: 8000, precioMenuViernes: 8500,
-    precioMenuSabado: 9000, precioMenuDomingo: 7500,
+    precioMenuMartes: 8500, precioMenuMiercoles: 8000, precioMenuViernes: 9000, precioMenuDomingo: 7500,
     preciosPizzas: [
         { name: 'Muzzarella', precioEntera: 4000, precioMedia: 2000 },
         { name: 'Jamon',      precioEntera: 5000, precioMedia: 2500 },
@@ -101,9 +100,13 @@ test('menú miercoles', () => {
     // 3 * 8000 = 24000
     assertEqual(calculateTotal(order, prices, 'miercoles'), 24000);
 });
+test('menú martes usa precio de martes', () => {
+    const order = emptyOrder({ menu: 2 });
+    assertEqual(calculateTotal(order, prices, 'martes'), 17000); // 2 * 8500
+});
 test('menú viernes usa precio de viernes', () => {
     const order = emptyOrder({ menu: 2 });
-    assertEqual(calculateTotal(order, prices, 'viernes'), 17000); // 2 * 8500
+    assertEqual(calculateTotal(order, prices, 'viernes'), 18000); // 2 * 9000
 });
 test('menú domingo usa precio de domingo', () => {
     const order = emptyOrder({ menu: 1 });

@@ -29,10 +29,10 @@ function calculateTotal(order, prices, currentMode) {
         total += (order.pizzaLibreG || 0) * prices.pizzaLibreG;
     }
 
-    if (currentMode === 'miercoles')     total += (order.menu || 0) * prices.precioMenuMiercoles;
-    else if (currentMode === 'viernes')  total += (order.menu || 0) * prices.precioMenuViernes;
-    else if (currentMode === 'sabado')   total += (order.menu || 0) * prices.precioMenuSabado;
-    else if (currentMode === 'domingo')  total += (order.menu || 0) * prices.precioMenuDomingo;
+    if (currentMode === 'martes')         total += (order.menu || 0) * prices.precioMenuMartes;
+    else if (currentMode === 'miercoles') total += (order.menu || 0) * prices.precioMenuMiercoles;
+    else if (currentMode === 'viernes')   total += (order.menu || 0) * prices.precioMenuViernes;
+    else if (currentMode === 'domingo')   total += (order.menu || 0) * prices.precioMenuDomingo;
 
     total += (order.empanadas || 0) * prices.empanada;
     total += (order.menores   || 0) * (order.menorPrice || 0);

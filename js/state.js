@@ -2,7 +2,7 @@
 const DEFAULT_PRICES = {
     pizzaLibreH: 10500, pizzaLibreM: 9500, pizzaLibreG: 10000,
     empanada: 200, precioPostre: 0,
-    precioMenuMiercoles: 0, precioMenuViernes: 0, precioMenuSabado: 0, precioMenuDomingo: 0,
+    precioMenuMartes: 0, precioMenuMiercoles: 0, precioMenuViernes: 0, precioMenuDomingo: 0,
     preciosPizzas: [
         { name: 'Muzzarella', precioEntera: 0, precioMedia: 0 },
         { name: 'Provenzal',  precioEntera: 0, precioMedia: 0 },
