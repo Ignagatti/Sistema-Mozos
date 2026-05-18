@@ -15,8 +15,8 @@ function calculatePizzaPrice(pizza, prices) {
 
     // entera
     if (toppings.length === 1) return getPizzaPrice(toppings[0], 'entera', prices);
-    if (toppings.length === 2) return (getPizzaPrice(toppings[0], 'entera', prices) / 2) + (getPizzaPrice(toppings[1], 'entera', prices) / 2);
-    if (toppings.length === 3) return (getPizzaPrice(toppings[0], 'entera', prices) / 2) + (getPizzaPrice(toppings[1], 'entera', prices) / 4) + (getPizzaPrice(toppings[2], 'entera', prices) / 4);
+    if (toppings.length === 2) return getPizzaPrice(toppings[0], 'media', prices) + getPizzaPrice(toppings[1], 'media', prices);
+    if (toppings.length === 3) return (getPizzaPrice(toppings[0], 'media', prices) / 2) + (getPizzaPrice(toppings[1], 'media', prices) / 2) + (getPizzaPrice(toppings[2], 'media', prices) / 2);
     return 0;
 }
 

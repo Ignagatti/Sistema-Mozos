@@ -65,13 +65,13 @@ console.log('\ncalculatePizzaPrice');
 test('entera 1 gusto', () => {
     assertEqual(calculatePizzaPrice({ size: 'entera', toppings: ['Muzzarella'] }, prices), 4000);
 });
-test('entera 2 gustos (mitad/mitad)', () => {
-    // (4000/2) + (5000/2) = 2000 + 2500 = 4500
+test('entera 2 gustos (media y media)', () => {
+    // precioMedia[Muzz] + precioMedia[Jamon] = 2000 + 2500 = 4500
     assertEqual(calculatePizzaPrice({ size: 'entera', toppings: ['Muzzarella', 'Jamon'] }, prices), 4500);
 });
-test('entera 3 gustos (1/2 + 1/4 + 1/4)', () => {
-    // (4000/2) + (5000/4) + (6000/4) = 2000 + 1250 + 1500 = 4750
-    assertEqual(calculatePizzaPrice({ size: 'entera', toppings: ['Muzzarella', 'Jamon', 'Roquefort'] }, prices), 4750);
+test('entera 3 gustos (mitad de cada media)', () => {
+    // precioMedia[Muzz]/2 + precioMedia[Jamon]/2 + precioMedia[Roquefort]/2 = 1000 + 1250 + 1500 = 3750
+    assertEqual(calculatePizzaPrice({ size: 'entera', toppings: ['Muzzarella', 'Jamon', 'Roquefort'] }, prices), 3750);
 });
 test('media 1 gusto', () => {
     assertEqual(calculatePizzaPrice({ size: 'media', toppings: ['Muzzarella'] }, prices), 2000);
