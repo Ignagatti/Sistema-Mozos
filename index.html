@@ -148,6 +148,18 @@
                     <option value="domingo">Domingo</option>
                 </select>
             </div>
+
+            <!-- Conteo Total de Personas (Solo visible días excepto Jueves y Viernes) -->
+            <div id="total-personas-card" class="mb-4 bg-indigo-50 border-2 border-indigo-200 rounded-xl p-3 shadow-sm transition-all duration-300">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center space-x-2">
+                        <span class="text-xl">👥</span>
+                        <span class="text-xs font-bold uppercase text-indigo-700 tracking-wider">Personas (Mesas)</span>
+                    </div>
+                    <span id="total-personas-count" class="text-2xl font-extrabold text-indigo-900">0</span>
+                </div>
+                <div id="total-personas-breakdown" class="text-xs text-indigo-600 mt-1 font-medium hidden"></div>
+            </div>
             
             <div class="space-y-3">
                 <button id="add-table-btn" class="w-full bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-blue-700 transition duration-300 flex items-center justify-center space-x-2">
@@ -457,10 +469,15 @@
     <div id="total-modal" class="fixed inset-0 z-50 items-center justify-center hidden modal-backdrop">
         <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm mx-4 p-6">
             <h2 class="text-2xl font-bold mb-4 text-gray-900">Total Registrado</h2>
-            <p class="mb-6 text-gray-600">Este es el monto total de todos los pedidos (mesas y barra) actualmente en el sistema.</p>
-            <div class="bg-indigo-100 border border-indigo-200 rounded-lg p-4 mb-6">
-                <span class="block text-lg font-medium text-indigo-800">Total</span>
-                <span id="total-modal-amount" class="block text-4xl font-bold text-indigo-900">$0.00</span>
+            <p class="mb-4 text-gray-600">Resumen general de los pedidos y comensales en el sistema.</p>
+            <div class="bg-indigo-100 border border-indigo-200 rounded-lg p-4 mb-4">
+                <span class="block text-sm font-semibold uppercase text-indigo-800 tracking-wider">Monto Total Facturado</span>
+                <span id="total-modal-amount" class="block text-3xl font-extrabold text-indigo-900 mt-1">$0.00</span>
+            </div>
+            <div id="total-modal-personas-box" class="bg-purple-100 border border-purple-200 rounded-lg p-4 mb-6">
+                <span class="block text-sm font-semibold uppercase text-purple-800 tracking-wider">Total Personas en Mesas</span>
+                <span id="total-modal-personas-count" class="block text-3xl font-extrabold text-purple-900 mt-1">0</span>
+                <span id="total-modal-personas-detail" class="block text-xs text-purple-700 mt-1 font-medium"></span>
             </div>
             <div class="flex justify-end">
                 <button id="close-total-modal-btn" class="bg-indigo-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-indigo-700">Cerrar</button>

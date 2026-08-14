@@ -61,7 +61,30 @@ function calculateGrandTotal(tables, barOrders, prices, currentMode) {
     return grand;
 }
 
+function calculateTablePersons(order, currentMode) {
+    if (!order) return 0;
+    if (currentMode === 'jueves' || currentMode === 'sabado') {
+        return 0;
+    }
+    // martes, miercoles, viernes, domingo y otros dias
+    return (order.menu || 0) + (order.menores || 0);
+}
+
+function calculateGrandTotalPersons(tables, currentMode) {
+    if (!tables || currentMode === 'jueves' || currentMode === 'sabado') {
+        return 0;
+    }
+    let totalPersons = 0;
+    tables.forEach(t => {
+        if (t && t.order) {
+            totalPersons += calculateTablePersons(t.order, currentMode);
+        }
+    });
+    return totalPersons;
+}
+
 // Exportar para Node.js (tests), sin romper el uso en browser
 if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { getPizzaPrice, calculatePizzaPrice, calculateTotal, calculateGrandTotal };
+    module.exports = { getPizzaPrice, calculatePizzaPrice, calculateTotal, calculateGrandTotal, calculateTablePersons, calculateGrandTotalPersons };
 }
+

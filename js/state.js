@@ -82,6 +82,18 @@ async function saveState() {
     await window.electronAPI.saveBackup(dataStr);
 }
 
+function resolveBeverageCategory(name, category) {
+    if (category && category !== 'otro') return category;
+    const n = (name || '').toLowerCase();
+    if (n.includes('agua') && !n.includes('saborizada')) return 'agua';
+    if (n.includes('saborizada') || n.includes('naranja') || n.includes('pomelo') || n.includes('manzana')) return 'saborizada';
+    if (n.includes('lata') || n.includes('coca') || n.includes('sprite') || n.includes('zero') || n.includes('pepsi') || n.includes('fanta') || n.includes('gaseosa')) return 'gaseosa';
+    if (n.includes('cerveza') || n.includes('heineken') || n.includes('corona') || n.includes('pilsen') || n.includes('stella') || n.includes('brahma') || n.includes('quilmes') || n.includes('santa fe')) return 'cerveza';
+    if (n.includes('vino') || n.includes('malbec') || n.includes('cabernet') || n.includes('tintillo') || n.includes('chardonnay') || n.includes('syrah') || n.includes('merlot') || n.includes('valentin') || n.includes('latitud') || n.includes('cordero') || n.includes('alma mora')) return 'vino';
+    if (n.includes('fernet') || n.includes('gancia') || n.includes('jarro') || n.includes('trago') || n.includes('campari') || n.includes('gin') || n.includes('vodka')) return 'jarro';
+    return category || 'otro';
+}
+
 async function loadState() {
     let raw = localStorage.getItem('restaurantState');
     if (!raw) raw = await window.electronAPI.loadBackup();
@@ -99,7 +111,13 @@ async function loadState() {
 
         // Merge de precios: los valores del archivo prevalecen, se preservan defaults para campos nuevos
         appState.prices = Object.assign(JSON.parse(JSON.stringify(DEFAULT_PRICES)), saved.prices || {});
-        if (saved.prices && saved.prices.beverages)    appState.prices.beverages    = saved.prices.beverages;
+        if (saved.prices && saved.prices.beverages) {
+            appState.prices.beverages = saved.prices.beverages.map(bev => ({
+                name: bev.name,
+                price: Number(bev.price) || 0,
+                category: resolveBeverageCategory(bev.name, bev.category)
+            }));
+        }
         if (saved.prices && saved.prices.preciosPizzas) appState.prices.preciosPizzas = saved.prices.preciosPizzas;
     } catch (e) {
         console.error('Error al parsear el estado guardado:', e);

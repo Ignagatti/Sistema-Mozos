@@ -1,7 +1,7 @@
 // Tests unitarios para js/calculations.js
 // Ejecutar con: node tests/calculations.test.js
 
-const { getPizzaPrice, calculatePizzaPrice, calculateTotal, calculateGrandTotal } = require('../js/calculations.js');
+const { getPizzaPrice, calculatePizzaPrice, calculateTotal, calculateGrandTotal, calculateTablePersons, calculateGrandTotalPersons } = require('../js/calculations.js');
 
 let passed = 0;
 let failed = 0;
@@ -160,6 +160,64 @@ test('sin pedidos da 0', () => {
     assertEqual(calculateGrandTotal([], [], prices, 'miercoles'), 0);
 });
 
+// ── calculateTablePersons & calculateGrandTotalPersons ───────────────────────
+console.log('\ncalculateTablePersons & calculateGrandTotalPersons');
+test('jueves da 0 personas (deshabilitado)', () => {
+    const order = emptyOrder({ pizzaLibreH: 3, pizzaLibreM: 2, menores: 1 });
+    assertEqual(calculateTablePersons(order, 'jueves'), 0);
+});
+
+test('sabado da 0 personas (deshabilitado)', () => {
+    const order = emptyOrder({ pizzaLibreH: 2, pizzaLibreM: 3, pizzaLibreG: 1, menores: 2 });
+    assertEqual(calculateTablePersons(order, 'sabado'), 0);
+});
+
+test('viernes suma menu y menores', () => {
+    const order = emptyOrder({ menu: 5, menores: 2 });
+    assertEqual(calculateTablePersons(order, 'viernes'), 7);
+});
+
+test('miercoles suma menu y menores', () => {
+    const order = emptyOrder({ menu: 4, menores: 2 });
+    assertEqual(calculateTablePersons(order, 'miercoles'), 6);
+});
+
+test('martes suma menu y menores', () => {
+    const order = emptyOrder({ menu: 3, menores: 0 });
+    assertEqual(calculateTablePersons(order, 'martes'), 3);
+});
+
+test('domingo suma menu y menores', () => {
+    const order = emptyOrder({ menu: 2, menores: 3 });
+    assertEqual(calculateTablePersons(order, 'domingo'), 5);
+});
+
+test('calculateGrandTotalPersons suma todas las mesas en miercoles', () => {
+    const tables = [
+        { order: emptyOrder({ menu: 4, menores: 1 }) }, // 5
+        { order: emptyOrder({ menu: 2, menores: 0 }) }, // 2
+        { order: emptyOrder({ menu: 0, menores: 0 }) }  // 0
+    ];
+    assertEqual(calculateGrandTotalPersons(tables, 'miercoles'), 7);
+});
+
+test('calculateGrandTotalPersons suma todas las mesas en viernes', () => {
+    const tables = [
+        { order: emptyOrder({ menu: 3, menores: 2 }) }, // 5
+        { order: emptyOrder({ menu: 4, menores: 0 }) }  // 4
+    ];
+    assertEqual(calculateGrandTotalPersons(tables, 'viernes'), 9);
+});
+
+test('calculateGrandTotalPersons da 0 en jueves y sabado', () => {
+    const tables = [
+        { order: emptyOrder({ pizzaLibreH: 5, pizzaLibreM: 5, pizzaLibreG: 2 }) }
+    ];
+    assertEqual(calculateGrandTotalPersons(tables, 'jueves'), 0);
+    assertEqual(calculateGrandTotalPersons(tables, 'sabado'), 0);
+});
+
 // ── Resultado final ──────────────────────────────────────────────────────────
 console.log(`\n${passed} pasaron, ${failed} fallaron\n`);
 if (failed > 0) process.exit(1);
+

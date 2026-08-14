@@ -110,6 +110,25 @@ document.addEventListener('DOMContentLoaded', async () => {
     const passwordCancelBtn   = document.getElementById('password-cancel-btn');
     const totalModalAmount    = document.getElementById('total-modal-amount');
 
+    // Conteo de Personas DOM
+    const totalPersonasCard        = document.getElementById('total-personas-card');
+    const totalPersonasCount       = document.getElementById('total-personas-count');
+    const totalPersonasBreakdown   = document.getElementById('total-personas-breakdown');
+    const totalModalPersonasBox    = document.getElementById('total-modal-personas-box');
+    const totalModalPersonasCount  = document.getElementById('total-modal-personas-count');
+    const totalModalPersonasDetail = document.getElementById('total-modal-personas-detail');
+
+    // Categorías de bebidas organizadas
+    const BEVERAGE_CATEGORIES = [
+        { id: 'vino',       label: 'Vinos',            icon: '🍷' },
+        { id: 'cerveza',    label: 'Cervezas',         icon: '🍺' },
+        { id: 'gaseosa',    label: 'Gaseosas',         icon: '🥤' },
+        { id: 'agua',       label: 'Aguas',            icon: '💧' },
+        { id: 'saborizada', label: 'Aguas Saborizadas',icon: '🍊' },
+        { id: 'jarro',      label: 'Jarros / Tragos',  icon: '🍹' },
+        { id: 'otro',       label: 'Otras Bebidas',    icon: '📦' }
+    ];
+
     // ── UI STATE (no se persiste) ─────────────────────────────────────────────
     let activeEntity       = null;
     let orderBeforeChanges = null;
@@ -125,14 +144,14 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     function resolveBeverageCategory(name, category) {
         if (category && category !== 'otro') return category;
-        const n = name.toLowerCase();
+        const n = (name || '').toLowerCase();
         if (n.includes('agua') && !n.includes('saborizada')) return 'agua';
         if (n.includes('saborizada') || n.includes('naranja') || n.includes('pomelo') || n.includes('manzana')) return 'saborizada';
-        if (n.includes('lata') || n.includes('coca') || n.includes('sprite') || n.includes('zero')) return 'gaseosa';
-        if (n.includes('cerveza')) return 'cerveza';
-        if (n.includes('vino'))    return 'vino';
-        if (n.includes('fernet') || n.includes('gancia')) return 'jarro';
-        return 'otro';
+        if (n.includes('lata') || n.includes('coca') || n.includes('sprite') || n.includes('zero') || n.includes('pepsi') || n.includes('fanta') || n.includes('gaseosa')) return 'gaseosa';
+        if (n.includes('cerveza') || n.includes('heineken') || n.includes('corona') || n.includes('pilsen') || n.includes('stella') || n.includes('brahma') || n.includes('quilmes') || n.includes('santa fe')) return 'cerveza';
+        if (n.includes('vino') || n.includes('malbec') || n.includes('cabernet') || n.includes('tintillo') || n.includes('chardonnay') || n.includes('syrah') || n.includes('merlot') || n.includes('valentin') || n.includes('latitud') || n.includes('cordero') || n.includes('alma mora')) return 'vino';
+        if (n.includes('fernet') || n.includes('gancia') || n.includes('jarro') || n.includes('trago') || n.includes('campari') || n.includes('gin') || n.includes('vodka')) return 'jarro';
+        return category || 'otro';
     }
 
     function getBeverageColor(name, category = 'otro') {
@@ -178,24 +197,69 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (mode === 'miercoles' && priceMenuMiercolesWrapper) priceMenuMiercolesWrapper.style.display = 'block';
         if (mode === 'viernes'   && priceMenuViernesWrapper)   priceMenuViernesWrapper.style.display   = 'block';
         if (mode === 'domingo'   && priceMenuDomingoWrapper)   priceMenuDomingoWrapper.style.display   = 'block';
+
+        updateTotalPersonsUI();
+    }
+
+    // ── CONTEO DE PERSONAS ───────────────────────────────────────────────────
+    function updateTotalPersonsUI() {
+        const mode = appState.currentMode;
+        const isExcluded = mode === 'jueves' || mode === 'sabado';
+
+        if (totalPersonasCard) {
+            if (isExcluded) {
+                totalPersonasCard.style.display = 'none';
+            } else {
+                totalPersonasCard.style.display = 'block';
+                const count = calculateGrandTotalPersons(appState.tables, mode);
+                if (totalPersonasCount) totalPersonasCount.textContent = count;
+
+                if (totalPersonasBreakdown) {
+                    let menus = 0, menores = 0;
+                    appState.tables.forEach(t => {
+                        if (t && t.order) {
+                            menus += (t.order.menu || 0);
+                            menores += (t.order.menores || 0);
+                        }
+                    });
+                    if (menores > 0) {
+                        totalPersonasBreakdown.textContent = `(${menus} menús + ${menores} menores)`;
+                        totalPersonasBreakdown.classList.remove('hidden');
+                    } else {
+                        totalPersonasBreakdown.classList.add('hidden');
+                    }
+                }
+            }
+        }
     }
 
     // ── RENDER ────────────────────────────────────────────────────────────────
-    function renderAll() { renderTables(); renderBarOrders(); }
+    function renderAll() {
+        renderTables();
+        renderBarOrders();
+        updateTotalPersonsUI();
+    }
 
     function renderTables() {
         mapaClub.innerHTML = '';
         appState.tables.forEach(table => {
             const el = document.createElement('div');
             el.id = table.id;
-            el.className = 'mesa absolute bg-blue-500 border-2 border-blue-700 rounded-lg flex items-center justify-center text-white font-bold text-2xl cursor-grab';
+            el.className = 'mesa absolute bg-blue-500 border-2 border-blue-700 rounded-lg flex items-center justify-center text-white font-bold text-2xl cursor-grab select-none';
             el.style.left   = `${table.x}px`;
             el.style.top    = `${table.y}px`;
             el.style.width  = `${table.width}px`;
             el.style.height = `${table.height}px`;
 
-            const numEl     = document.createElement('span');
-            numEl.textContent = table.number;
+            const persons = calculateTablePersons(table.order, appState.currentMode);
+            const numEl = document.createElement('div');
+            numEl.className = 'text-center flex flex-col items-center justify-center pointer-events-none';
+            if (persons > 0 && appState.currentMode !== 'jueves' && appState.currentMode !== 'sabado') {
+                numEl.innerHTML = `<span class="leading-none text-2xl font-bold">${escapeHtml(table.number)}</span><span class="text-xs bg-blue-900 bg-opacity-70 px-1.5 py-0.5 rounded-full mt-1 flex items-center gap-1 font-semibold">👥 ${persons}</span>`;
+            } else {
+                numEl.innerHTML = `<span class="leading-none text-2xl font-bold">${escapeHtml(table.number)}</span>`;
+            }
+
             const resizerEl = document.createElement('div');
             resizerEl.className = 'resizer';
 
@@ -283,14 +347,24 @@ document.addEventListener('DOMContentLoaded', async () => {
         postresCount.textContent   = order.postres   || 0;
 
         beverageSelect.innerHTML = '';
-        appState.prices.beverages.forEach(bev => {
-            const opt   = document.createElement('option');
-            opt.value   = bev.name;
-            opt.textContent = `${bev.name} - $${bev.price.toFixed(2)}`;
-            const style = getBeverageOptionStyle(bev.name, bev.category);
-            opt.style.backgroundColor = style.bg;
-            opt.style.color           = style.text;
-            beverageSelect.appendChild(opt);
+        BEVERAGE_CATEGORIES.forEach(cat => {
+            const catBevs = appState.prices.beverages
+                .filter(bev => resolveBeverageCategory(bev.name, bev.category) === cat.id);
+
+            if (catBevs.length > 0) {
+                const groupEl = document.createElement('optgroup');
+                groupEl.label = `${cat.icon} ${cat.label}`;
+                catBevs.forEach(bev => {
+                    const opt = document.createElement('option');
+                    opt.value = bev.name;
+                    opt.textContent = `${bev.name} - $${bev.price.toFixed(2)}`;
+                    const style = getBeverageOptionStyle(bev.name, bev.category);
+                    opt.style.backgroundColor = style.bg;
+                    opt.style.color           = style.text;
+                    groupEl.appendChild(opt);
+                });
+                beverageSelect.appendChild(groupEl);
+            }
         });
 
         [pizzaTopping1Select, pizzaTopping2Select, pizzaTopping3Select].forEach((sel, i) => {
@@ -406,16 +480,51 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     function renderBeveragePrices() {
         beveragesPricesList.innerHTML = '';
-        appState.prices.beverages.forEach((bev, index) => {
-            const item     = document.createElement('div');
-            const colorCls = getBeverageColor(bev.name, bev.category);
-            item.className = `flex items-center justify-between p-2 rounded border-l-4 ${colorCls}`;
-            item.innerHTML = `
-                <span class="flex-grow font-medium ${colorCls.includes('text-white') ? 'text-white' : 'text-gray-800'}">${bev.name}</span>
-                <input type="number" value="${bev.price.toFixed(2)}" data-index="${index}" class="bev-price-input w-24 p-1 border rounded-lg text-right">
-                <button data-index="${index}" class="delete-bev-price-btn text-red-500 font-bold p-1 ml-1 hover:text-red-700">X</button>
-            `;
-            beveragesPricesList.appendChild(item);
+
+        BEVERAGE_CATEGORIES.forEach(cat => {
+            const matchingItems = [];
+            appState.prices.beverages.forEach((bev, index) => {
+                if (resolveBeverageCategory(bev.name, bev.category) === cat.id) {
+                    matchingItems.push({ bev, index });
+                }
+            });
+
+            if (matchingItems.length > 0) {
+                const section = document.createElement('div');
+                section.className = 'mb-4 border border-gray-200 rounded-xl overflow-hidden bg-white shadow-sm';
+
+                const header = document.createElement('div');
+                header.className = 'bg-gray-100 px-3 py-2 border-b flex items-center justify-between';
+                header.innerHTML = `
+                    <div class="flex items-center space-x-1.5 font-bold text-sm text-gray-800">
+                        <span>${cat.icon}</span>
+                        <span>${cat.label}</span>
+                    </div>
+                    <span class="text-xs bg-gray-300 text-gray-700 px-2 py-0.5 rounded-full font-bold">${matchingItems.length}</span>
+                `;
+                section.appendChild(header);
+
+                const listContainer = document.createElement('div');
+                listContainer.className = 'p-2 space-y-2';
+
+                matchingItems.forEach(({ bev, index }) => {
+                    const item = document.createElement('div');
+                    const colorCls = getBeverageColor(bev.name, bev.category);
+                    item.className = `flex items-center justify-between p-2 rounded-lg border-l-4 ${colorCls} bg-white shadow-xs`;
+                    item.innerHTML = `
+                        <span class="flex-grow font-medium ${colorCls.includes('text-white') ? 'text-white' : 'text-gray-800'} text-sm mr-2">${escapeHtml(bev.name)}</span>
+                        <div class="flex items-center space-x-1">
+                            <span class="text-xs text-gray-500 font-bold">$</span>
+                            <input type="number" step="0.01" min="0" value="${bev.price.toFixed(2)}" data-index="${index}" class="bev-price-input w-24 p-1 border rounded-lg text-right font-bold text-sm">
+                            <button data-index="${index}" class="delete-bev-price-btn text-red-500 font-bold p-1 ml-1 hover:text-red-700 text-lg transition" title="Eliminar bebida">&times;</button>
+                        </div>
+                    `;
+                    listContainer.appendChild(item);
+                });
+
+                section.appendChild(listContainer);
+                beveragesPricesList.appendChild(section);
+            }
         });
     }
 
@@ -763,9 +872,26 @@ document.addEventListener('DOMContentLoaded', async () => {
     addNewBeveragePriceBtn.addEventListener('click', () => {
         const name     = newBeverageNameInput.value.trim();
         const price    = parseFloat(newBeveragePriceInput.value);
-        const category = newBeverageCategoryInput.value;
+        const category = newBeverageCategoryInput.value || 'otro';
         if (name && !isNaN(price)) {
-            appState.prices.beverages.push({ name, price, category });
+            const newBev = { name, price, category };
+
+            // Encontrar el último índice de la misma categoría para insertarlo junto a sus pares
+            let insertIdx = -1;
+            for (let i = appState.prices.beverages.length - 1; i >= 0; i--) {
+                const b = appState.prices.beverages[i];
+                if (resolveBeverageCategory(b.name, b.category) === category) {
+                    insertIdx = i + 1;
+                    break;
+                }
+            }
+
+            if (insertIdx !== -1) {
+                appState.prices.beverages.splice(insertIdx, 0, newBev);
+            } else {
+                appState.prices.beverages.push(newBev);
+            }
+
             newBeverageNameInput.value  = '';
             newBeveragePriceInput.value = '';
             renderBeveragePrices();
@@ -773,9 +899,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
 
     beveragesPricesList.addEventListener('click', e => {
-        if (e.target.classList.contains('delete-bev-price-btn')) {
-            appState.prices.beverages.splice(parseInt(e.target.dataset.index), 1);
-            renderBeveragePrices();
+        const btn = e.target.closest('.delete-bev-price-btn');
+        if (btn) {
+            const idx = parseInt(btn.dataset.index);
+            if (!isNaN(idx) && appState.prices.beverages[idx]) {
+                appState.prices.beverages.splice(idx, 1);
+                renderBeveragePrices();
+            }
         }
     });
 
@@ -813,6 +943,29 @@ document.addEventListener('DOMContentLoaded', async () => {
     showTotalBtn.addEventListener('click', () => {
         const grand = calculateGrandTotal(appState.tables, appState.barOrders, appState.prices, appState.currentMode);
         totalModalAmount.textContent = `$${grand.toFixed(2)}`;
+
+        const isExcluded = appState.currentMode === 'jueves' || appState.currentMode === 'sabado';
+        if (totalModalPersonasBox) {
+            if (isExcluded) {
+                totalModalPersonasBox.style.display = 'none';
+            } else {
+                totalModalPersonasBox.style.display = 'block';
+                const totalPersons = calculateGrandTotalPersons(appState.tables, appState.currentMode);
+                if (totalModalPersonasCount) totalModalPersonasCount.textContent = totalPersons;
+
+                if (totalModalPersonasDetail) {
+                    let menus = 0, menores = 0;
+                    appState.tables.forEach(t => {
+                        if (t && t.order) {
+                            menus += (t.order.menu || 0);
+                            menores += (t.order.menores || 0);
+                        }
+                    });
+                    totalModalPersonasDetail.textContent = menores > 0 ? `${menus} menús + ${menores} menores` : '';
+                }
+            }
+        }
+
         totalModal.style.display = 'flex';
     });
 
