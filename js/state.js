@@ -43,7 +43,7 @@ const DEFAULT_PRICES = {
 
 const DEFAULT_GENERIC_DATA = {
     establishmentName: 'Club Bochas',
-    address: '', phone: '', email: '', footer: ''
+    address: '', phone: '', email: '', footer: '', alias: ''
 };
 
 // Fuente única de verdad de la aplicación

@@ -408,8 +408,15 @@
                         <span class="text-center">Precio Entera</span>
                         <span class="text-center">Precio Media</span>
                     </div>
-                    <div id="custom-pizza-prices-list" class="space-y-2">
+                    <div id="custom-pizza-prices-list" class="space-y-2 mb-4">
                         <!-- Los precios de las pizzas se insertarán aquí -->
+                    </div>
+                    <!-- NUEVO CAMPO PARA GUSTO DE PIZZA -->
+                    <div class="flex flex-col space-y-2 bg-gray-100 p-3 rounded-lg">
+                        <div class="flex items-center space-x-2">
+                            <input type="text" id="new-pizza-name" placeholder="Nombre del Gusto" class="flex-grow p-2 border rounded-lg">
+                            <button id="add-new-pizza-btn" class="bg-blue-600 text-white p-2 rounded-lg hover:bg-blue-700 whitespace-nowrap">Agregar Gusto</button>
+                        </div>
                     </div>
                 </div>
                 <!-- PRECIO EMPANADA (SIEMPRE) -->
@@ -527,6 +534,10 @@
                 <div>
                     <label class="block font-semibold mb-1">Pie de Página / Mensaje</label>
                     <textarea id="generic-footer" class="w-full p-2 border rounded-lg" rows="3" placeholder="Ej: Gracias por su visita"></textarea>
+                </div>
+                <div>
+                    <label class="block font-semibold mb-1">Alias (MercadoPago / Transf.)</label>
+                    <input type="text" id="generic-alias" class="w-full p-2 border rounded-lg" placeholder="Ej: club.bochas.mp">
                 </div>
             </div>
             <div class="p-4 border-t bg-gray-50">

@@ -186,11 +186,11 @@ const TICKET_CONFIG = {
       return text.replace(/[&<>"']/g, m => map[m]);
     },
 
-    /**
-     * Formatea un número como moneda
-     */
     formatCurrency: function(amount) {
-      return `$ ${Number(amount).toFixed(2)}`;
+      let num = Number(amount) || 0;
+      let str = num.toFixed(2);
+      str = str.endsWith('.00') ? str.slice(0, -3) : str;
+      return `$ ${str}`;
     },
 
     /**

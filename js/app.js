@@ -50,6 +50,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const genericPhoneInput             = document.getElementById('generic-phone');
     const genericEmailInput             = document.getElementById('generic-email');
     const genericFooterInput            = document.getElementById('generic-footer');
+    const genericAliasInput             = document.getElementById('generic-alias');
     const saveGenericDataBtn            = document.getElementById('save-generic-data-btn');
 
     // Contadores del modal de pedido
@@ -88,6 +89,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     const addNewBeveragePriceBtn   = document.getElementById('add-new-beverage-price-btn');
     const savePricesBtn            = document.getElementById('save-prices-btn');
     const customPizzaPricesList    = document.getElementById('custom-pizza-prices-list');
+    const newPizzaNameInput        = document.getElementById('new-pizza-name');
+    const addNewPizzaBtn           = document.getElementById('add-new-pizza-btn');
 
     // Constructor de pizzas
     const pizzaSizeSelect     = document.getElementById('pizza-size');
@@ -140,6 +143,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         return String(str)
             .replace(/&/g, '&amp;').replace(/</g, '&lt;')
             .replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+    }
+
+    function formatPrice(amount) {
+        let num = Number(amount) || 0;
+        let str = num.toFixed(2);
+        return str.endsWith('.00') ? str.slice(0, -3) : str;
     }
 
     function resolveBeverageCategory(name, category) {
@@ -282,7 +291,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             const el    = document.createElement('div');
             el.className = 'bg-gray-100 p-3 rounded-lg cursor-pointer hover:bg-gray-200';
             const total = calculateTotal(order.order, appState.prices, appState.currentMode);
-            el.innerHTML = `<div class="flex justify-between items-center"><span class="font-semibold">${order.clientName}</span><span class="font-bold text-gray-700">$${total.toFixed(2)}</span></div>`;
+            el.innerHTML = `<div class="flex justify-between items-center"><span class="font-semibold">${order.clientName}</span><span class="font-bold text-gray-700">$${formatPrice(total)}</span></div>`;
             el.addEventListener('click', () => openOrderModal(order.id, 'bar'));
             barOrdersList.appendChild(el);
         });
@@ -302,7 +311,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (order.menu > 0) modalOrderList.innerHTML += `<div class="order-item-food">${order.menu} x Menú</div>`;
         }
         if (order.empanadas > 0) modalOrderList.innerHTML += `<div class="order-item-food">${order.empanadas} x Empanada</div>`;
-        if (order.menores   > 0) modalOrderList.innerHTML += `<div class="order-item-food">${order.menores} x Menor — $${((order.menores||0)*(order.menorPrice||0)).toFixed(2)}</div>`;
+        if (order.menores   > 0) modalOrderList.innerHTML += `<div class="order-item-food">${order.menores} x Menor — $${formatPrice((order.menores||0)*(order.menorPrice||0))}</div>`;
         if (order.postres   > 0) modalOrderList.innerHTML += `<div class="order-item-food">${order.postres} x Postre</div>`;
 
         if (order.pizzasPersonalizadas && order.pizzasPersonalizadas.length > 0) {
@@ -346,7 +355,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         menuCount.textContent      = order.menu      || 0;
         postresCount.textContent   = order.postres   || 0;
 
-        beverageSelect.innerHTML = '';
+        beverageSelect.innerHTML = '<option value="" disabled selected>-- Seleccionar bebida --</option>';
         BEVERAGE_CATEGORIES.forEach(cat => {
             const catBevs = appState.prices.beverages
                 .filter(bev => resolveBeverageCategory(bev.name, bev.category) === cat.id);
@@ -357,7 +366,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 catBevs.forEach(bev => {
                     const opt = document.createElement('option');
                     opt.value = bev.name;
-                    opt.textContent = `${bev.name} - $${bev.price.toFixed(2)}`;
+                    opt.textContent = `${bev.name} - $${formatPrice(bev.price)}`;
                     const style = getBeverageOptionStyle(bev.name, bev.category);
                     opt.style.backgroundColor = style.bg;
                     opt.style.color           = style.text;
@@ -388,7 +397,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     function updateTotal() {
         if (!activeEntity) return;
         const total = calculateTotal(activeEntity.order, appState.prices, appState.currentMode);
-        modalTotalPrice.textContent = `$${total.toFixed(2)}`;
+        modalTotalPrice.textContent = `$${formatPrice(total)}`;
         renderAll();
     }
 
@@ -515,7 +524,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                         <span class="flex-grow font-medium ${colorCls.includes('text-white') ? 'text-white' : 'text-gray-800'} text-sm mr-2">${escapeHtml(bev.name)}</span>
                         <div class="flex items-center space-x-1">
                             <span class="text-xs text-gray-500 font-bold">$</span>
-                            <input type="number" step="0.01" min="0" value="${bev.price.toFixed(2)}" data-index="${index}" class="bev-price-input w-24 p-1 border rounded-lg text-right font-bold text-sm">
+                            <input type="number" step="0.01" min="0" value="${formatPrice(bev.price)}" data-index="${index}" class="bev-price-input w-24 p-1 border rounded-lg text-right font-bold text-sm">
                             <button data-index="${index}" class="delete-bev-price-btn text-red-500 font-bold p-1 ml-1 hover:text-red-700 text-lg transition" title="Eliminar bebida">&times;</button>
                         </div>
                     `;
@@ -532,11 +541,18 @@ document.addEventListener('DOMContentLoaded', async () => {
         customPizzaPricesList.innerHTML = '';
         appState.prices.preciosPizzas.forEach((pizza, index) => {
             const item     = document.createElement('div');
-            item.className = 'flex items-center justify-between bg-gray-50 p-2 rounded gap-2';
+            item.className = 'flex items-center justify-between bg-white shadow-xs p-2 border border-gray-200 rounded-lg gap-2';
             item.innerHTML = `
-                <span class="flex-grow">${pizza.name}</span>
-                <input type="number" value="${(pizza.precioEntera||0).toFixed(2)}" data-pizza-index="${index}" data-price-type="entera" class="pizza-price-input w-24 p-1 border rounded-lg text-right" placeholder="Entera">
-                <input type="number" value="${(pizza.precioMedia ||0).toFixed(2)}" data-pizza-index="${index}" data-price-type="media"  class="pizza-price-input w-24 p-1 border rounded-lg text-right" placeholder="Media">
+                <span class="flex-grow font-medium text-gray-800 text-sm truncate mr-2">${escapeHtml(pizza.name)}</span>
+                <div class="flex items-center space-x-1">
+                    <span class="text-xs text-gray-500 font-bold">$</span>
+                    <input type="number" value="${formatPrice(pizza.precioEntera||0)}" data-pizza-index="${index}" data-price-type="entera" class="pizza-price-input w-20 p-1 border rounded-lg text-right font-bold text-sm" placeholder="Entera">
+                </div>
+                <div class="flex items-center space-x-1">
+                    <span class="text-xs text-gray-500 font-bold">$</span>
+                    <input type="number" value="${formatPrice(pizza.precioMedia ||0)}" data-pizza-index="${index}" data-price-type="media"  class="pizza-price-input w-20 p-1 border rounded-lg text-right font-bold text-sm" placeholder="Media">
+                </div>
+                <button data-index="${index}" class="delete-pizza-price-btn text-red-500 font-bold p-1 ml-1 hover:text-red-700 text-lg transition" title="Eliminar gusto">&times;</button>
             `;
             customPizzaPricesList.appendChild(item);
         });
@@ -608,6 +624,12 @@ document.addEventListener('DOMContentLoaded', async () => {
             p.className = 'text-sm text-gray-700'; p.textContent = `Email: ${appState.genericData.email}`;
             header.appendChild(p);
         }
+        if (appState.genericData.alias) {
+            const aliasEl = document.createElement('div');
+            aliasEl.className = 'mt-3 text-left';
+            aliasEl.innerHTML = `<span class="text-xs block mb-1 font-bold">ALIAS:</span><span class="font-bold text-lg text-black tracking-wider break-all">${appState.genericData.alias}</span>`;
+            header.appendChild(aliasEl);
+        }
         printSinglePreview.appendChild(header);
 
         const clientTitle = document.createElement('h2');
@@ -625,7 +647,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         function addItem(label, amount) {
             const p = document.createElement('p');
             p.className = 'flex justify-between';
-            p.innerHTML = `<span>${label}</span><span>$ ${amount.toFixed(2)}</span>`;
+            p.innerHTML = `<span>${label}</span><span>$ ${formatPrice(amount)}</span>`;
             detailDiv.appendChild(p);
         }
 
@@ -641,7 +663,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             order.pizzasPersonalizadas.forEach(pizza => {
                 const p    = document.createElement('p');
                 p.className = 'flex justify-between';
-                p.innerHTML = `<span>1 x Pizza ${pizza.size} (${pizza.toppings.join(', ')})</span><span>$ ${calculatePizzaPrice(pizza, appState.prices).toFixed(2)}</span>`;
+                p.innerHTML = `<span>1 x Pizza ${pizza.size} (${pizza.toppings.join(', ')})</span><span>$ ${formatPrice(calculatePizzaPrice(pizza, appState.prices))}</span>`;
                 detailDiv.appendChild(p);
             });
         }
@@ -661,7 +683,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const lblEl     = document.createElement('p');
         lblEl.className = 'text-lg font-bold'; lblEl.textContent = 'TOTAL';
         const valEl     = document.createElement('p');
-        valEl.className = 'text-3xl font-bold text-green-600'; valEl.textContent = `$ ${totalAmt.toFixed(2)}`;
+        valEl.className = 'text-3xl font-bold text-green-600'; valEl.textContent = `$ ${formatPrice(totalAmt)}`;
         totalDiv.appendChild(lblEl); totalDiv.appendChild(valEl);
         printSinglePreview.appendChild(totalDiv);
 
@@ -674,10 +696,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         const style = document.createElement('style');
         style.textContent = `
-            #print-single-preview { width:58mm; max-width:58mm; margin:0 auto; font-size:13px; }
+            #print-single-preview { width:58mm; max-width:58mm; margin:0 auto; font-size:9px; font-family: 'Inter', Arial, sans-serif; }
             #print-single-preview img { max-height:110px; max-width:100%; display:block; margin:0 auto 8px; }
-            @page { size:58mm 200mm; margin:3mm; }
-            @media print { html,body { background:white; } #print-single-preview { width:58mm; max-width:58mm; margin:0; } }
+            @page { size:58mm auto; margin:0; }
+            @media print { html,body { background:white; margin:0; padding:0; } #print-single-preview { width:48mm; max-width:48mm; margin:0 auto; } }
         `;
         printSinglePreview.appendChild(style);
     }
@@ -909,6 +931,26 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     });
 
+    addNewPizzaBtn.addEventListener('click', () => {
+        const name = newPizzaNameInput.value.trim();
+        if (name) {
+            appState.prices.preciosPizzas.push({ name: name, precioEntera: 0, precioMedia: 0 });
+            newPizzaNameInput.value = '';
+            renderCustomPizzaPrices();
+        }
+    });
+
+    customPizzaPricesList.addEventListener('click', e => {
+        const btn = e.target.closest('.delete-pizza-price-btn');
+        if (btn) {
+            const idx = parseInt(btn.dataset.index);
+            if (!isNaN(idx) && appState.prices.preciosPizzas[idx]) {
+                appState.prices.preciosPizzas.splice(idx, 1);
+                renderCustomPizzaPrices();
+            }
+        }
+    });
+
     savePricesBtn.addEventListener('click', () => {
         appState.prices.pizzaLibreH          = parseFloat(pricePizzaLibreHInput.value)   || 0;
         appState.prices.pizzaLibreM          = parseFloat(pricePizzaLibreMInput.value)   || 0;
@@ -942,7 +984,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     showTotalBtn.addEventListener('click', () => {
         const grand = calculateGrandTotal(appState.tables, appState.barOrders, appState.prices, appState.currentMode);
-        totalModalAmount.textContent = `$${grand.toFixed(2)}`;
+        totalModalAmount.textContent = `$${formatPrice(grand)}`;
 
         const isExcluded = appState.currentMode === 'jueves' || appState.currentMode === 'sabado';
         if (totalModalPersonasBox) {
@@ -975,6 +1017,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         genericPhoneInput.value             = appState.genericData.phone;
         genericEmailInput.value             = appState.genericData.email;
         genericFooterInput.value            = appState.genericData.footer;
+        genericAliasInput.value             = appState.genericData.alias || '';
         genericDataModal.style.display = 'flex';
     });
 
@@ -984,6 +1027,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         appState.genericData.phone             = genericPhoneInput.value;
         appState.genericData.email             = genericEmailInput.value;
         appState.genericData.footer            = genericFooterInput.value;
+        appState.genericData.alias             = genericAliasInput.value;
         saveState();
         genericDataModal.style.display = 'none';
     });
@@ -999,19 +1043,27 @@ document.addEventListener('DOMContentLoaded', async () => {
         const order = activeEntity.order;
         let bodyHtml = '';
 
-        bodyHtml += `<div class="text-center"><div style="font-weight:700;font-size:14px;">${escapeHtml(appState.genericData.establishmentName||'')}</div>`;
-        if (appState.genericData.address) bodyHtml += `<div style="font-size:10px;">${escapeHtml(appState.genericData.address)}</div>`;
-        if (appState.genericData.phone)   bodyHtml += `<div style="font-size:10px;">Tel: ${escapeHtml(appState.genericData.phone)}</div>`;
-        if (appState.genericData.email)   bodyHtml += `<div style="font-size:10px;">${escapeHtml(appState.genericData.email)}</div>`;
-        bodyHtml += '<hr style="border:none;border-top:1px dashed #333;margin:6px 0;"/></div>';
+        bodyHtml += `<div style="text-align:center;"><div style="font-weight:700;font-size:15px;">${escapeHtml(appState.genericData.establishmentName||'')}</div></div>`;
+        bodyHtml += `<div>`;
+        if (appState.genericData.address) bodyHtml += `<div style="font-size:11px;">${escapeHtml(appState.genericData.address)}</div>`;
+        if (appState.genericData.phone)   bodyHtml += `<div style="font-size:11px;">Tel: ${escapeHtml(appState.genericData.phone)}</div>`;
+        if (appState.genericData.email)   bodyHtml += `<div style="font-size:11px;">${escapeHtml(appState.genericData.email)}</div>`;
+        
+        if (appState.genericData.alias) {
+             bodyHtml += `<div style="margin: 4px 0; font-size: 12px;">`;
+             bodyHtml += `<strong>ALIAS:</strong> ${escapeHtml(appState.genericData.alias)}`;
+             bodyHtml += `</div>`;
+        }
+        
+        bodyHtml += '<hr style="border:none;border-top:1.5px dashed #000;margin:8px 0;"/></div>';
 
         bodyHtml += activeEntity.id.startsWith('table-')
-            ? `<div style="text-align:center;font-weight:700;margin:6px 0;">MESA ${escapeHtml(activeEntity.number)}</div>`
-            : `<div style="text-align:center;font-weight:700;margin:6px 0;">PEDIDO: ${escapeHtml(activeEntity.clientName)}</div>`;
+            ? `<div style="text-align:center;font-weight:700;margin:6px 0;font-size:10px;">MESA ${escapeHtml(activeEntity.number)}</div>`
+            : `<div style="text-align:center;font-weight:700;margin:6px 0;font-size:10px;">PEDIDO: ${escapeHtml(activeEntity.clientName)}</div>`;
 
         bodyHtml += '<div style="margin-top:6px;">';
         function line(label, amount) {
-            return `<div class="line"><span class="label">${escapeHtml(label)}</span><span class="amount">$ ${Number(amount).toFixed(2)}</span></div>`;
+            return `<div class="line"><span class="label">${escapeHtml(label)}</span><span class="amount">$ ${formatPrice(Number(amount))}</span></div>`;
         }
 
         if (order.pizzaLibreH > 0) bodyHtml += line(`${order.pizzaLibreH} x Pizza Libre Hombres`, order.pizzaLibreH * appState.prices.pizzaLibreH);
@@ -1037,20 +1089,20 @@ document.addEventListener('DOMContentLoaded', async () => {
         bodyHtml += '</div>';
         const totalAmt = calculateTotal(order, appState.prices, appState.currentMode);
         bodyHtml += '<hr class="small"/>';
-        bodyHtml += `<div class="line" style="margin-top:6px;"><span class="label" style="font-weight:800;">TOTAL</span><span class="amount" style="font-size:16px;font-weight:800;">$ ${totalAmt.toFixed(2)}</span></div>`;
+        bodyHtml += `<div class="line" style="margin-top:6px;"><span class="label" style="font-weight:800;font-size:10px;">TOTAL</span><span class="amount" style="font-size:11px;font-weight:800;">$ ${formatPrice(totalAmt)}</span></div>`;
         if (appState.genericData.footer) {
-            bodyHtml += `<div style="text-align:center;font-size:10px;margin-top:8px;">${escapeHtml(appState.genericData.footer)}</div>`;
+            bodyHtml += `<div style="text-align:center;font-size:8px;margin-top:8px;word-break:break-word;">${escapeHtml(appState.genericData.footer)}</div>`;
         }
 
         const ticketHtml = `<!doctype html><html><head><meta charset="utf-8"><title>Ticket</title><style>
-            @page{size:58mm 200mm;margin:3mm;}
-            html,body{margin:0;padding:0;background:#fff}
-            body{font-family:Inter,Arial,sans-serif;color:#111}
-            .ticket{width:58mm;max-width:58mm;margin:0 auto;padding:0}
-            .line{display:flex;justify-content:space-between;align-items:flex-start;font-size:12px;line-height:1.1;margin:4px 0}
-            .label{flex:1;text-align:left;word-break:break-word;margin-right:8px}
-            .amount{width:74px;text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
-            hr.small{border:none;border-top:1px dashed #222;margin:8px 0}
+            @page{margin:0;}
+            html,body{margin:0;padding:0;background:#fff;width:100%;}
+            body{font-family:'Inter',Arial,sans-serif;color:#111;}
+            .ticket{width:100%;box-sizing:border-box;padding-left:0;padding-right:8mm;margin:0;}
+            .line{display:flex;justify-content:space-between;align-items:flex-start;font-size:10px;line-height:1.1;margin:2px 0;}
+            .label{flex:1;text-align:left;word-break:break-word;margin-right:4px;}
+            .amount{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums;flex-shrink:0;}
+            hr.small{border:none;border-top:1px dashed #222;margin:4px 0;}
         </style></head><body><div class="ticket">${bodyHtml}</div></body></html>`;
 
         const w = window.open('', '_blank', 'toolbar=0,location=0,menubar=0');
