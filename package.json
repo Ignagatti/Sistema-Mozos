@@ -6,7 +6,7 @@
   "scripts": {
     "start": "electron .",
     "build": "electron-builder --win nsis",
-    "test": "node tests/calculations.test.js"
+    "test": "node tests/calculations.test.js && node tests/sales-report.test.js"
   },
   "build": {
     "appId": "com.tuempresa.gestionmozos",

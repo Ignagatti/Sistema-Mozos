@@ -8,6 +8,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const managePricesBtn     = document.getElementById('manage-prices-btn');
     const clearAllOrdersBtn   = document.getElementById('clear-all-orders-btn');
     const showTotalBtn        = document.getElementById('show-total-btn');
+    const exportPdfBtn        = document.getElementById('export-pdf-btn');
 
     // Secciones del modal de pedido
     const pizzaLibreSection         = document.getElementById('pizza-libre-section');
@@ -31,6 +32,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     const totalModal               = document.getElementById('total-modal');
     const printSingleAccountModal  = document.getElementById('print-single-account-modal');
     const genericDataModal         = document.getElementById('generic-data-modal');
+    const salesReportModal         = document.getElementById('sales-report-modal');
+    const salesReportContent       = document.getElementById('sales-report-content');
 
     // Botones de modales
     const closeOrderModalBtn               = document.getElementById('close-order-modal-btn');
@@ -43,6 +46,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     const printSingleAccountBtn            = document.getElementById('print-single-account-btn');
     const closeGenericDataModalBtn         = document.getElementById('close-generic-data-modal-btn');
     const genericDataBtn                   = document.getElementById('generic-data-btn');
+    const downloadPdfBtn                   = document.getElementById('download-pdf-btn');
+    const closeSalesReportModalBtn         = document.getElementById('close-sales-report-modal-btn');
+    const closeSalesReportFinalBtn         = document.getElementById('close-sales-report-final-btn');
 
     // Datos genéricos
     const genericEstablishmentNameInput = document.getElementById('generic-establishment-name');
@@ -136,6 +142,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     let activeEntity       = null;
     let orderBeforeChanges = null;
     let actionToConfirm    = null;
+    let currentSalesReport = null;
 
     // ── HELPERS ───────────────────────────────────────────────────────────────
     function escapeHtml(str) {
@@ -1030,6 +1037,37 @@ document.addEventListener('DOMContentLoaded', async () => {
         appState.genericData.alias             = genericAliasInput.value;
         saveState();
         genericDataModal.style.display = 'none';
+    });
+
+    exportPdfBtn.addEventListener('click', () => {
+        currentSalesReport = generateSalesReport(
+            appState.tables,
+            appState.barOrders,
+            appState.prices,
+            appState.currentMode,
+            appState.genericData
+        );
+        salesReportContent.innerHTML = SalesReportManager.renderModalDashboard(currentSalesReport);
+        salesReportModal.style.display = 'flex';
+    });
+
+    downloadPdfBtn.addEventListener('click', async () => {
+        currentSalesReport = generateSalesReport(
+            appState.tables,
+            appState.barOrders,
+            appState.prices,
+            appState.currentMode,
+            appState.genericData
+        );
+        await SalesReportManager.downloadSalesReportPDF(currentSalesReport);
+    });
+
+    closeSalesReportModalBtn.addEventListener('click', () => {
+        salesReportModal.style.display = 'none';
+    });
+
+    closeSalesReportFinalBtn.addEventListener('click', () => {
+        salesReportModal.style.display = 'none';
     });
 
     printSingleAccountBtn.addEventListener('click', () => {

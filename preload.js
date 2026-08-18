@@ -9,5 +9,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
   saveBackup: (data) => ipcRenderer.send('save-backup', data),
   
   // Función para cargar el respaldo. Pide los datos al proceso principal.
-  loadBackup: () => ipcRenderer.invoke('load-backup')
+  loadBackup: () => ipcRenderer.invoke('load-backup'),
+
+  // Función para guardar / descargar PDF del reporte
+  savePDF: (data) => ipcRenderer.invoke('save-pdf', data),
+
+  // Función para mostrar archivo descargado en el explorador de archivos
+  showItemInFolder: (filePath) => ipcRenderer.send('show-item-in-folder', filePath)
 });

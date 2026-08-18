@@ -1,7 +1,15 @@
 // Tests unitarios para js/calculations.js
 // Ejecutar con: node tests/calculations.test.js
 
-const { getPizzaPrice, calculatePizzaPrice, calculateTotal, calculateGrandTotal, calculateTablePersons, calculateGrandTotalPersons } = require('../js/calculations.js');
+const {
+    getPizzaPrice,
+    calculatePizzaPrice,
+    calculateTotal,
+    calculateGrandTotal,
+    calculateTablePersons,
+    calculateGrandTotalPersons,
+    generateSalesReport
+} = require('../js/calculations.js');
 
 let passed = 0;
 let failed = 0;
@@ -217,7 +225,133 @@ test('calculateGrandTotalPersons da 0 en jueves y sabado', () => {
     assertEqual(calculateGrandTotalPersons(tables, 'sabado'), 0);
 });
 
+// ── generateSalesReport ──────────────────────────────────────────────────
+console.log('\ngenerateSalesReport');
+
+test('reporte vacío genera métricas en cero sin romper', () => {
+    const report = generateSalesReport([], [], prices, 'miercoles');
+    assertEqual(report.totalRecaudado, 0);
+    assertEqual(report.totalUnidades, 0);
+    assertEqual(report.totalPersonas, 0);
+    assertEqual(report.activeEntitiesCount, 0);
+    assertEqual(report.ticketPromedio, 0);
+    assertEqual(report.topVendidos.length, 0);
+    assertEqual(report.sinVentasList.length > 0, true);
+});
+
+test('reporte con mesas y barra calcula totales, unidades y ticket promedio', () => {
+    const tables = [
+        {
+            id: 't-1',
+            number: '1',
+            order: emptyOrder({
+                menu: 4,
+                menores: 2,
+                menorPrice: 2000,
+                empanadas: 6,
+                postres: 2,
+                beverages: [
+                    { name: 'Coca', quantity: 4 },
+                    { name: 'Heineken', quantity: 2 }
+                ]
+            })
+        },
+        {
+            id: 't-2',
+            number: '2',
+            order: emptyOrder({
+                menu: 2,
+                beverages: [
+                    { name: 'Coca', quantity: 2 }
+                ]
+            })
+        }
+    ];
+
+    const barOrders = [
+        {
+            id: 'b-1',
+            clientName: 'Juan',
+            order: emptyOrder({
+                empanadas: 2,
+                beverages: [{ name: 'Heineken', quantity: 1 }]
+            })
+        }
+    ];
+
+    // Total cálculos:
+    // Mesa 1: 4*8000 (32000) + 2*2000 (4000) + 6*500 (3000) + 2*1000 (2000) + 4*1000 (4000) + 2*2000 (4000) = 49000
+    // Mesa 2: 2*8000 (16000) + 2*1000 (2000) = 18000
+    // Barra 1: 2*500 (1000) + 1*2000 (2000) = 3000
+    // Total = 49000 + 18000 + 3000 = 70000
+    // Personas: (4+2) + (2+0) = 8
+    // Unidades: Mesa 1 (4+2+6+2+4+2=20) + Mesa 2 (2+2=4) + Barra (2+1=3) = 27
+    const report = generateSalesReport(tables, barOrders, prices, 'miercoles');
+
+    assertEqual(report.totalRecaudado, 70000);
+    assertEqual(report.totalPersonas, 8);
+    assertEqual(report.totalUnidades, 27);
+    assertEqual(report.activeEntitiesCount, 3);
+    assertClose(report.ticketPromedio, 70000 / 3);
+
+    // Validar top vendidos
+    // Coca: 6 unidades (4 Mesa 1 + 2 Mesa 2)
+    // Empanadas: 8 unidades (6 Mesa 1 + 2 Barra)
+    // Menú: 6 unidades (4 Mesa 1 + 2 Mesa 2)
+    // Heineken: 3 unidades (2 Mesa 1 + 1 Barra)
+    // Menores: 2 unidades
+    // Postres: 2 unidades
+    assertEqual(report.topVendidos[0].name, 'Empanadas'); // 8 units
+    assertEqual(report.topVendidos[0].units, 8);
+
+    // Validar menos vendidos
+    assertEqual(report.menosVendidos[0].units, 2);
+
+    // Validar productos sin ventas
+    // En este caso, no se vendió pizza libre ni pizzas por gusto
+    const sinVentasNombres = report.sinVentasList.map(s => s.name);
+    assertEqual(sinVentasNombres.includes('Gusto Pizza: Muzzarella'), true);
+});
+
+test('reporte sábado con pizza libre y pizzas personalizadas', () => {
+    const tables = [
+        {
+            id: 't-1',
+            number: '5',
+            order: emptyOrder({
+                pizzaLibreH: 2,
+                pizzaLibreM: 3,
+                pizzasPersonalizadas: [
+                    { size: 'entera', toppings: ['Muzzarella', 'Jamon'] }
+                ],
+                beverages: [{ name: 'Heineken', quantity: 4 }]
+            })
+        }
+    ];
+
+    // Sabado:
+    // Pizza Libre: 2*10000 (20000) + 3*9000 (27000) = 47000
+    // Pizza Personalizada entera 2 gustos: Jamon (2500) + Muzzarella (2000) = 4500
+    // Bebidas: 4*2000 (8000)
+    // Total = 47000 + 4500 + 8000 = 59500
+    // Personas: 2 + 3 = 5
+    // Unidades: 2 + 3 + 1 + 4 = 10
+    const report = generateSalesReport(tables, [], prices, 'sabado');
+
+    assertEqual(report.totalRecaudado, 59500);
+    assertEqual(report.totalPersonas, 5);
+    assertEqual(report.totalUnidades, 10);
+    assertEqual(report.isPizzaLibreMode, true);
+
+    // Pizza Libre Hombres y Mujeres están en soldItemsList
+    const soldNames = report.soldItemsList.map(s => s.name);
+    assertEqual(soldNames.includes('Pizza Libre (Hombres)'), true);
+    assertEqual(soldNames.includes('Pizza Libre (Mujeres)'), true);
+    assertEqual(soldNames.includes('Pizza Entera (Muzzarella, Jamon)'), true);
+});
+
 // ── Resultado final ──────────────────────────────────────────────────────────
 console.log(`\n${passed} pasaron, ${failed} fallaron\n`);
 if (failed > 0) process.exit(1);
+
 

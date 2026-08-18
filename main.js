@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, shell } = require('electron');
+const { app, BrowserWindow, ipcMain, shell, dialog } = require('electron');
 const path = require('path');
 const fs = require('fs').promises; // Usamos fs.promises para operaciones asíncronas
 
@@ -46,6 +46,69 @@ app.whenReady().then(() => {
       }
       console.error('Failed to load backup:', err);
       return null;
+    }
+  });
+
+  // Maneja la generación y descarga directa de PDF sin diálogo de impresora
+  ipcMain.handle('save-pdf', async (event, { html, defaultFilename }) => {
+    let pdfWin = null;
+    try {
+      const mainWindow = BrowserWindow.fromWebContents(event.sender);
+      const { canceled, filePath } = await dialog.showSaveDialog(mainWindow, {
+        title: 'Descargar Reporte de Ventas (PDF)',
+        defaultPath: defaultFilename || `Reporte-Ventas-${new Date().toISOString().slice(0, 10)}.pdf`,
+        filters: [
+          { name: 'Documento PDF (*.pdf)', extensions: ['pdf'] }
+        ]
+      });
+
+      if (canceled || !filePath) {
+        return { success: false, canceled: true };
+      }
+
+      // Crear ventana en segundo plano para renderizar el documento
+      pdfWin = new BrowserWindow({
+        show: false,
+        width: 1000,
+        height: 1400,
+        webPreferences: {
+          sandbox: true
+        }
+      });
+
+      await pdfWin.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(html)}`);
+
+      // Breve pausa para asegurar renderizado completo de CSS y SVG
+      await new Promise(resolve => setTimeout(resolve, 350));
+
+      const pdfBuffer = await pdfWin.webContents.printToPDF({
+        pageSize: 'A4',
+        printBackground: true,
+        margins: {
+          top: 0.3,
+          bottom: 0.3,
+          left: 0.3,
+          right: 0.3
+        }
+      });
+
+      await fs.writeFile(filePath, pdfBuffer);
+
+      return { success: true, filePath };
+    } catch (err) {
+      console.error('Error al generar PDF:', err);
+      return { success: false, error: err.message };
+    } finally {
+      if (pdfWin) {
+        pdfWin.destroy();
+      }
+    }
+  });
+
+  // Abrir ubicación del archivo descargado
+  ipcMain.on('show-item-in-folder', (event, filePath) => {
+    if (filePath) {
+      shell.showItemInFolder(filePath);
     }
   });
   
