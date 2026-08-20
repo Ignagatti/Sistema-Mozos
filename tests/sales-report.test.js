@@ -79,11 +79,11 @@ test('renderModalDashboard genera HTML válido con KPIs, lo más vendido, gustos
     assertIncludes(html, 'Club Social y Deportivo');
     assertIncludes(html, 'Reporte de Ventas');
     assertIncludes(html, 'Día: Miercoles');
-    assertIncludes(html, 'Lo que MÁS se Vendió');
-    assertIncludes(html, 'Gustos de Pizza que Más Salen');
-    assertIncludes(html, 'Lo que Menos se Vendió');
-    assertIncludes(html, 'Lo que NO se Vendió');
-    assertIncludes(html, 'Detalle Completo de Todo lo Vendido');
+    assertIncludes(html, 'Productos Más Vendidos');
+    assertIncludes(html, 'Gustos de Pizza Más Vendidos');
+    assertIncludes(html, 'Productos Menos Vendidos');
+    assertIncludes(html, 'Productos Sin Ventas');
+    assertIncludes(html, 'Detalle Consolidado de Todo lo Vendido');
     assertIncludes(html, 'Menú del Día');
     assertIncludes(html, 'Coca');
     assertIncludes(html, 'Vino Malbec');
@@ -97,11 +97,11 @@ test('generatePrintDocumentHTML genera documento A4 con resumen y detalle', () =
     assertIncludes(printHtml, '@page {');
     assertIncludes(printHtml, 'size: A4 portrait;');
     assertIncludes(printHtml, 'Club Social y Deportivo');
-    assertIncludes(printHtml, 'Reporte General de Ventas y Consumo');
-    assertIncludes(printHtml, 'Lo que MÁS se Vendió');
-    assertIncludes(printHtml, 'Gustos de Pizza que Más Salen');
-    assertIncludes(printHtml, 'Lo que NO se Vendió');
-    assertIncludes(printHtml, 'Detalle de Todo lo Vendido');
+    assertIncludes(printHtml, 'Informe Consolidado de Cierre y Ventas');
+    assertIncludes(printHtml, 'Productos Más Vendidos');
+    assertIncludes(printHtml, 'Gustos de Pizza Más Vendidos');
+    assertIncludes(printHtml, 'Productos Sin Ventas');
+    assertIncludes(printHtml, 'Detalle Consolidado de Todo lo Vendido');
 });
 
 test('getReportFileName genera nombre con día de operación y fecha', () => {

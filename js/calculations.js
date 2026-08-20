@@ -335,13 +335,13 @@ function generateSalesReport(tables = [], barOrders = [], prices = {}, currentMo
 
     // Categorías de bebidas agrupadas
     const BEV_CAT_CONFIG = [
-        { id: 'vino',       label: 'Vinos',             icon: '🍷', color: '#9333EA' },
-        { id: 'cerveza',    label: 'Cervezas',          icon: '🍺', color: '#EAB308' },
-        { id: 'gaseosa',    label: 'Gaseosas',          icon: '🥤', color: '#EF4444' },
-        { id: 'agua',       label: 'Aguas',             icon: '💧', color: '#3B82F6' },
-        { id: 'saborizada', label: 'Aguas Saborizadas', icon: '🍊', color: '#F97316' },
-        { id: 'jarro',      label: 'Jarros / Tragos',   icon: '🍹', color: '#6366F1' },
-        { id: 'otro',       label: 'Otras Bebidas',     icon: '📦', color: '#64748B' }
+        { id: 'vino',       label: 'Vinos',             icon: '', color: '#475569' },
+        { id: 'cerveza',    label: 'Cervezas',          icon: '', color: '#334155' },
+        { id: 'gaseosa',    label: 'Gaseosas',          icon: '', color: '#1E293B' },
+        { id: 'agua',       label: 'Aguas',             icon: '', color: '#2563EB' },
+        { id: 'saborizada', label: 'Aguas Saborizadas', icon: '', color: '#0F766E' },
+        { id: 'jarro',      label: 'Jarros / Tragos',   icon: '', color: '#4F46E5' },
+        { id: 'otro',       label: 'Otras Bebidas',     icon: '', color: '#64748B' }
     ];
 
     const beverageCategoryBreakdown = BEV_CAT_CONFIG.map(cat => {
@@ -363,11 +363,11 @@ function generateSalesReport(tables = [], barOrders = [], prices = {}, currentMo
 
     // Resumen por rubro general
     const categoryBreakdown = [
-        { id: 'comida', label: isPizzaLibreMode ? 'Pizza Libre / Menús' : 'Menú Principal', icon: '🍽️', color: '#4F46E5', units: comidaUnits, subtotal: comidaSubtotal },
-        { id: 'pizzas', label: 'Pizzas por Gusto', icon: '🍕', color: '#10B981', units: customPizzaUnits, subtotal: customPizzaSubtotal },
-        { id: 'empanadas', label: 'Empanadas', icon: '🥟', color: '#F59E0B', units: empanadaUnits, subtotal: empanadaSubtotal },
-        { id: 'postres', label: 'Postres', icon: '🍰', color: '#EC4899', units: postreUnits, subtotal: postreSubtotal },
-        { id: 'bebidas', label: 'Bebidas', icon: '🥤', color: '#06B6D4', units: bebidaUnits, subtotal: bebidaSubtotal }
+        { id: 'comida', label: isPizzaLibreMode ? 'Pizza Libre / Menús' : 'Menú Principal', icon: '', color: '#1E293B', units: comidaUnits, subtotal: comidaSubtotal },
+        { id: 'pizzas', label: 'Pizzas por Gusto', icon: '', color: '#0F766E', units: customPizzaUnits, subtotal: customPizzaSubtotal },
+        { id: 'empanadas', label: 'Empanadas', icon: '', color: '#334155', units: empanadaUnits, subtotal: empanadaSubtotal },
+        { id: 'postres', label: 'Postres', icon: '', color: '#475569', units: postreUnits, subtotal: postreSubtotal },
+        { id: 'bebidas', label: 'Bebidas', icon: '', color: '#2563EB', units: bebidaUnits, subtotal: bebidaSubtotal }
     ].map(cat => ({
         ...cat,
         percentOfTotalRevenue: totalRecaudado > 0 ? ((cat.subtotal / totalRecaudado) * 100) : 0,
@@ -378,42 +378,42 @@ function generateSalesReport(tables = [], barOrders = [], prices = {}, currentMo
     const soldItemsList = [];
 
     if (isPizzaLibreMode) {
-        if (pizzaLibreHUnits > 0) soldItemsList.push({ name: 'Pizza Libre (Hombres)', category: 'Comida', units: pizzaLibreHUnits, unitPrice: prices.pizzaLibreH || 0, subtotal: pizzaLibreHSubtotal, icon: '🍕' });
-        if (pizzaLibreMUnits > 0) soldItemsList.push({ name: 'Pizza Libre (Mujeres)', category: 'Comida', units: pizzaLibreMUnits, unitPrice: prices.pizzaLibreM || 0, subtotal: pizzaLibreMSubtotal, icon: '🍕' });
-        if (pizzaLibreGUnits > 0) soldItemsList.push({ name: 'Pizza Libre (General)', category: 'Comida', units: pizzaLibreGUnits, unitPrice: prices.pizzaLibreG || 0, subtotal: pizzaLibreGSubtotal, icon: '🍕' });
+        if (pizzaLibreHUnits > 0) soldItemsList.push({ name: 'Pizza Libre (Hombres)', category: 'Comida', units: pizzaLibreHUnits, unitPrice: prices.pizzaLibreH || 0, subtotal: pizzaLibreHSubtotal, icon: '' });
+        if (pizzaLibreMUnits > 0) soldItemsList.push({ name: 'Pizza Libre (Mujeres)', category: 'Comida', units: pizzaLibreMUnits, unitPrice: prices.pizzaLibreM || 0, subtotal: pizzaLibreMSubtotal, icon: '' });
+        if (pizzaLibreGUnits > 0) soldItemsList.push({ name: 'Pizza Libre (General)', category: 'Comida', units: pizzaLibreGUnits, unitPrice: prices.pizzaLibreG || 0, subtotal: pizzaLibreGSubtotal, icon: '' });
     } else {
-        if (menuUnits > 0) soldItemsList.push({ name: 'Menú del Día', category: 'Comida', units: menuUnits, unitPrice: menuPrice, subtotal: menuSubtotal, icon: '🍽️' });
+        if (menuUnits > 0) soldItemsList.push({ name: 'Menú del Día', category: 'Comida', units: menuUnits, unitPrice: menuPrice, subtotal: menuSubtotal, icon: '' });
     }
 
-    if (menoresUnits > 0) soldItemsList.push({ name: 'Menores', category: 'Comida', units: menoresUnits, unitPrice: menoresUnits > 0 ? (menoresSubtotal / menoresUnits) : 0, subtotal: menoresSubtotal, icon: '🧒' });
-    if (empanadaUnits > 0) soldItemsList.push({ name: 'Empanadas', category: 'Empanadas', units: empanadaUnits, unitPrice: prices.empanada || 0, subtotal: empanadaSubtotal, icon: '🥟' });
-    if (postreUnits > 0) soldItemsList.push({ name: 'Postres', category: 'Postres', units: postreUnits, unitPrice: prices.precioPostre || 0, subtotal: postreSubtotal, icon: '🍰' });
+    if (menoresUnits > 0) soldItemsList.push({ name: 'Menores', category: 'Comida', units: menoresUnits, unitPrice: menoresUnits > 0 ? (menoresSubtotal / menoresUnits) : 0, subtotal: menoresSubtotal, icon: '' });
+    if (empanadaUnits > 0) soldItemsList.push({ name: 'Empanadas', category: 'Empanadas', units: empanadaUnits, unitPrice: prices.empanada || 0, subtotal: empanadaSubtotal, icon: '' });
+    if (postreUnits > 0) soldItemsList.push({ name: 'Postres', category: 'Postres', units: postreUnits, unitPrice: prices.precioPostre || 0, subtotal: postreSubtotal, icon: '' });
 
     Object.values(customPizzasMap).forEach(p => {
         if (p.units > 0) {
-            soldItemsList.push({ name: p.name, category: 'Pizzas por Gusto', units: p.units, unitPrice: p.price, subtotal: p.subtotal, icon: '🍕' });
+            soldItemsList.push({ name: p.name, category: 'Pizzas por Gusto', units: p.units, unitPrice: p.price, subtotal: p.subtotal, icon: '' });
         }
     });
 
     allBeveragesList.forEach(b => {
         if (b.units > 0) {
-            soldItemsList.push({ name: b.name, category: 'Bebidas', units: b.units, unitPrice: b.price, subtotal: b.subtotal, icon: '🥤' });
+            soldItemsList.push({ name: b.name, category: 'Bebidas', units: b.units, unitPrice: b.price, subtotal: b.subtotal, icon: '' });
         }
     });
 
-    // 🏆 Rankings
+    // Rankings
     // Más vendidos (orden descendente por unidades, luego subtotal)
     const topVendidos = [...soldItemsList].sort((a, b) => (b.units - a.units) || (b.subtotal - a.subtotal));
 
     // Menos vendidos (de los que tuvieron ventas > 0, orden ascendente por unidades)
     const menosVendidos = [...soldItemsList].sort((a, b) => (a.units - b.units) || (a.subtotal - b.subtotal));
 
-    // 🚫 Sin Ventas (0 Unidades Vendidas)
+    // Sin Ventas (0 Unidades Vendidas)
     const sinVentasList = [];
 
     // Bebidas sin ventas
     allBeveragesList.filter(b => b.units === 0).forEach(b => {
-        sinVentasList.push({ name: b.name, category: 'Bebidas', price: b.price, icon: '🥤', reason: 'Sin demanda' });
+        sinVentasList.push({ name: b.name, category: 'Bebidas', price: b.price, icon: '', reason: 'Sin demanda' });
     });
 
     // Gustos de pizzas sin ventas (si sábado o hay gustos configurados)
@@ -424,7 +424,7 @@ function generateSalesReport(tables = [], barOrders = [], prices = {}, currentMo
                 name: `Gusto Pizza: ${topName}`,
                 category: 'Pizzas por Gusto',
                 price: pizzaInfo.precioEntera || 0,
-                icon: '🍕',
+                icon: '',
                 reason: 'Sin pedidos'
             });
         }
@@ -432,11 +432,11 @@ function generateSalesReport(tables = [], barOrders = [], prices = {}, currentMo
 
     // Comidas principales sin ventas
     if (isPizzaLibreMode) {
-        if (pizzaLibreHUnits === 0) sinVentasList.push({ name: 'Pizza Libre (Hombres)', category: 'Comida', price: prices.pizzaLibreH || 0, icon: '🍕', reason: '0 unidades' });
-        if (pizzaLibreMUnits === 0) sinVentasList.push({ name: 'Pizza Libre (Mujeres)', category: 'Comida', price: prices.pizzaLibreM || 0, icon: '🍕', reason: '0 unidades' });
-        if (pizzaLibreGUnits === 0) sinVentasList.push({ name: 'Pizza Libre (General)', category: 'Comida', price: prices.pizzaLibreG || 0, icon: '🍕', reason: '0 unidades' });
+        if (pizzaLibreHUnits === 0) sinVentasList.push({ name: 'Pizza Libre (Hombres)', category: 'Comida', price: prices.pizzaLibreH || 0, icon: '', reason: '0 unidades' });
+        if (pizzaLibreMUnits === 0) sinVentasList.push({ name: 'Pizza Libre (Mujeres)', category: 'Comida', price: prices.pizzaLibreM || 0, icon: '', reason: '0 unidades' });
+        if (pizzaLibreGUnits === 0) sinVentasList.push({ name: 'Pizza Libre (General)', category: 'Comida', price: prices.pizzaLibreG || 0, icon: '', reason: '0 unidades' });
     } else {
-        if (menuUnits === 0) sinVentasList.push({ name: 'Menú del Día', category: 'Comida', price: menuPrice, icon: '🍽️', reason: '0 unidades' });
+        if (menuUnits === 0) sinVentasList.push({ name: 'Menú del Día', category: 'Comida', price: menuPrice, icon: '', reason: '0 unidades' });
     }
 
     if (empanadaUnits === 0) sinVentasList.push({ name: 'Empanadas', category: 'Empanadas', price: prices.empanada || 0, icon: '🥟', reason: '0 unidades' });

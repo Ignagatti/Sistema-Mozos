@@ -553,20 +553,46 @@
         </div>
     </div>
 
+    <!-- Modal de Confirmación de Cambio de Día -->
+    <div id="change-day-modal" class="fixed inset-0 z-50 items-center justify-center hidden modal-backdrop">
+        <div class="bg-white rounded-xl shadow-xl w-full max-w-md mx-4 overflow-hidden border border-gray-200">
+            <div class="bg-slate-900 text-white px-6 py-4">
+                <h3 class="font-bold text-base leading-tight uppercase tracking-wider">Cambio de Día de Operación</h3>
+                <p class="text-xs text-slate-300 mt-0.5">Inicio de nueva jornada de trabajo</p>
+            </div>
+            <div class="p-6 space-y-4">
+                <p id="change-day-message" class="text-sm text-gray-700 font-medium leading-relaxed">
+                    ¿Deseas <strong>limpiar los pedidos del día anterior</strong> para comenzar la jornada con las mesas vacías en <strong><span id="change-day-target-name"></span></strong>?
+                </p>
+                <div class="bg-slate-50 border border-slate-200 rounded-lg p-3 text-xs text-slate-700">
+                    <span>Si eliges <strong>Limpiar Pedidos</strong>, las mesas y la barra se reiniciarán a $0 para comenzar el nuevo día en limpio.</span>
+                </div>
+            </div>
+            <div class="p-4 bg-gray-50 border-t border-gray-200 flex flex-col sm:flex-row gap-2 justify-end">
+                <button id="change-day-clear-btn" class="flex-1 bg-slate-800 hover:bg-slate-900 text-white font-bold py-2 px-4 rounded-lg text-xs transition shadow-sm">
+                    Limpiar Pedidos Anteriores
+                </button>
+                <button id="change-day-keep-btn" class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold py-2 px-4 rounded-lg text-xs transition">
+                    Mantener Pedidos
+                </button>
+                <button id="change-day-cancel-btn" class="text-gray-500 hover:text-gray-700 text-xs px-2 py-2">
+                    Cancelar
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- Modal de Reporte de Ventas y Exportación PDF -->
     <div id="sales-report-modal" class="fixed inset-0 z-50 items-center justify-center hidden modal-backdrop">
-        <div class="bg-gray-100 rounded-2xl shadow-2xl w-full max-w-5xl mx-4 my-6 max-h-[92vh] flex flex-col overflow-hidden">
+        <div class="bg-gray-100 rounded-xl shadow-2xl w-full max-w-5xl mx-4 my-6 max-h-[92vh] flex flex-col overflow-hidden">
             <!-- Modal Header -->
             <div class="flex justify-between items-center px-6 py-4 bg-white border-b border-gray-200">
-                <div class="flex items-center space-x-3">
-                    <span class="p-2 bg-emerald-100 text-emerald-700 rounded-xl font-bold text-xl">📊</span>
-                    <div>
-                        <h2 class="text-xl font-black text-gray-900 tracking-tight">Reporte Ejecutivo de Ventas</h2>
-                        <p class="text-xs text-gray-500">Métricas completas, productos vendidos, gráficos y análisis de rotación</p>
-                    </div>
+                <div>
+                    <h2 class="text-lg font-bold text-gray-900 uppercase tracking-wide">Reporte Consolidado de Ventas</h2>
+                    <p class="text-xs text-gray-500">Métricas completas, productos vendidos, gráficos y análisis de rotación</p>
                 </div>
                 <div class="flex items-center space-x-2">
-                    <button id="download-pdf-btn" class="bg-gradient-to-r from-emerald-600 to-teal-700 text-white font-bold py-2 px-4 rounded-xl hover:from-emerald-700 hover:to-teal-800 shadow-sm transition flex items-center space-x-1.5 text-sm">
+                    <button id="download-pdf-btn" class="bg-slate-900 hover:bg-slate-800 text-white font-semibold py-2 px-4 rounded-lg shadow-sm transition flex items-center space-x-2 text-xs">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                         </svg>

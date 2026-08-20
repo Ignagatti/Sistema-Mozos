@@ -50,6 +50,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     const closeSalesReportModalBtn         = document.getElementById('close-sales-report-modal-btn');
     const closeSalesReportFinalBtn         = document.getElementById('close-sales-report-final-btn');
 
+    // Modal Cambio de Día
+    const changeDayModal      = document.getElementById('change-day-modal');
+    const changeDayTargetName = document.getElementById('change-day-target-name');
+    const changeDayClearBtn   = document.getElementById('change-day-clear-btn');
+    const changeDayKeepBtn    = document.getElementById('change-day-keep-btn');
+    const changeDayCancelBtn  = document.getElementById('change-day-cancel-btn');
+
     // Datos genéricos
     const genericEstablishmentNameInput = document.getElementById('generic-establishment-name');
     const genericAddressInput           = document.getElementById('generic-address');
@@ -143,6 +150,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     let orderBeforeChanges = null;
     let actionToConfirm    = null;
     let currentSalesReport = null;
+    let pendingNewMode     = null;
+    let modeBeforeChange   = null;
 
     // ── HELPERS ───────────────────────────────────────────────────────────────
     function escapeHtml(str) {
@@ -436,7 +445,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 if (newNum) activeEntity.number = newNum;
             }
         }
-        if (activeEntity && orderBeforeChanges && (appState.currentMode === 'jueves' || appState.currentMode === 'sabado')) {
+        if (activeEntity && orderBeforeChanges) {
             const name    = activeEntity.id.startsWith('table-') ? `Mesa ${activeEntity.number}` : activeEntity.clientName;
             const message = generateOrderMessage(orderBeforeChanges, activeEntity.order, name);
             if (message) sendWhatsAppMessage(message);
@@ -577,21 +586,59 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (dH > 0) parts.push(`+${dH} Libre Hombres`);
             if (dM > 0) parts.push(`+${dM} Libre Mujeres`);
             if (dG > 0) parts.push(`+${dG} Libre General`);
-        }
-        if (mode === 'jueves' || mode === 'sabado') {
+
             const dP = (newOrder.pizzasPersonalizadas?.length||0) - (oldOrder.pizzasPersonalizadas?.length||0);
-            if (dP > 0) parts.push(`+${dP} Pizzas Nuevas (Ver detalle en app)`);
-        }
-        if (mode !== 'jueves' && mode !== 'sabado') {
+            if (dP > 0) parts.push(`+${dP} Pizzas Nuevas`);
+        } else {
             const dMenu = (newOrder.menu||0) - (oldOrder.menu||0);
             if (dMenu > 0) parts.push(`+${dMenu} Menú`);
         }
+
+        const dEmp = (newOrder.empanadas||0) - (oldOrder.empanadas||0);
+        if (dEmp > 0) parts.push(`+${dEmp} Empanadas`);
+
+        const dPostre = (newOrder.postres||0) - (oldOrder.postres||0);
+        if (dPostre > 0) parts.push(`+${dPostre} Postres`);
+
         return parts.length > 0 ? `*${entityName}:* ${parts.join(', ')}` : null;
     }
 
     function sendWhatsAppMessage(message) {
         if (!appState.numeroCocina) { console.error('Número de cocina no configurado.'); return; }
         window.electronAPI.openExternal(`whatsapp://send?phone=${appState.numeroCocina}&text=${encodeURIComponent(message)}`);
+    }
+
+    function showModeToast(mode, customSubtitle) {
+        let toast = document.getElementById('mode-toast-notification');
+        if (!toast) {
+            toast = document.createElement('div');
+            toast.id = 'mode-toast-notification';
+            toast.className = 'fixed top-5 right-5 z-50 bg-slate-900 text-white px-5 py-3.5 rounded-xl shadow-xl border border-slate-700 flex items-center space-x-3 transition-all duration-300';
+            document.body.appendChild(toast);
+        }
+
+        const names = {
+            martes: 'Martes (Menú)',
+            miercoles: 'Miércoles (Menú)',
+            jueves: 'Jueves (Pizza Libre)',
+            viernes: 'Viernes (Menú)',
+            sabado: 'Sábado (Pizza Libre)',
+            domingo: 'Domingo (Menú)'
+        };
+
+        const subtitle = customSubtitle || `Día activo: ${names[mode] || mode}`;
+
+        toast.innerHTML = `
+            <div>
+                <h4 class="font-bold text-xs text-slate-300 uppercase tracking-wider">Modo de Operación</h4>
+                <p class="text-xs text-white font-semibold">${escapeHtml(subtitle)}</p>
+            </div>
+        `;
+
+        toast.style.display = 'flex';
+        setTimeout(() => {
+            if (toast) toast.style.display = 'none';
+        }, 4000);
     }
 
     // ── IMPRESIÓN ─────────────────────────────────────────────────────────────
@@ -711,12 +758,105 @@ document.addEventListener('DOMContentLoaded', async () => {
         printSinglePreview.appendChild(style);
     }
 
-    // ── EVENT LISTENERS ───────────────────────────────────────────────────────
+    const DAY_NAMES = {
+        martes: 'Martes (Menú)',
+        miercoles: 'Miércoles (Menú)',
+        jueves: 'Jueves (Pizza Libre)',
+        viernes: 'Viernes (Menú)',
+        sabado: 'Sábado (Pizza Libre)',
+        domingo: 'Domingo (Menú)'
+    };
+
+    function isOrderNotEmpty(ord) {
+        if (!ord) return false;
+        if ((ord.pizzaLibreH || 0) > 0) return true;
+        if ((ord.pizzaLibreM || 0) > 0) return true;
+        if ((ord.pizzaLibreG || 0) > 0) return true;
+        if ((ord.menu || 0) > 0) return true;
+        if ((ord.menores || 0) > 0) return true;
+        if ((ord.empanadas || 0) > 0) return true;
+        if ((ord.postres || 0) > 0) return true;
+        if (ord.beverages && ord.beverages.some(b => (b.quantity || 0) > 0)) return true;
+        if (ord.pizzasPersonalizadas && ord.pizzasPersonalizadas.length > 0) return true;
+        return false;
+    }
+
+    function hasActiveOrders() {
+        const hasTableOrders = appState.tables.some(table => isOrderNotEmpty(table.order));
+        const hasBarOrders   = appState.barOrders && appState.barOrders.some(bar => isOrderNotEmpty(bar.order));
+        return hasTableOrders || hasBarOrders;
+    }
+
     modeSwitcher.addEventListener('change', e => {
-        appState.currentMode = e.target.value;
-        updateUIMode(appState.currentMode);
-        saveState();
+        const newMode = e.target.value;
+        if (newMode === appState.currentMode) return;
+
+        // Solo solicitar confirmación de limpieza si hay pedidos cargados en las mesas o barra
+        if (hasActiveOrders()) {
+            pendingNewMode = newMode;
+            modeBeforeChange = appState.currentMode;
+
+            if (changeDayTargetName) {
+                changeDayTargetName.textContent = DAY_NAMES[newMode] || capitalizeFirstLetter(newMode);
+            }
+            if (changeDayModal) {
+                changeDayModal.style.display = 'flex';
+            }
+        } else {
+            // Si no hay pedidos cargados, cambiar el día directamente
+            appState.currentMode = newMode;
+            updateUIMode(appState.currentMode);
+            saveState();
+            renderAll();
+            showModeToast(appState.currentMode);
+        }
     });
+
+    if (changeDayClearBtn) {
+        changeDayClearBtn.addEventListener('click', () => {
+            if (!pendingNewMode) return;
+            appState.currentMode = pendingNewMode;
+            // Limpiar los pedidos del día anterior en mesas y barra
+            appState.tables.forEach(t => {
+                t.order = getNewOrderObject();
+            });
+            appState.barOrders = [];
+
+            updateUIMode(appState.currentMode);
+            saveState();
+            renderAll();
+            closeChangeDayModal();
+            showModeToast(appState.currentMode, '¡Pedidos del día anterior limpiados para la nueva jornada!');
+        });
+    }
+
+    if (changeDayKeepBtn) {
+        changeDayKeepBtn.addEventListener('click', () => {
+            if (!pendingNewMode) return;
+            appState.currentMode = pendingNewMode;
+            updateUIMode(appState.currentMode);
+            saveState();
+            renderAll();
+            closeChangeDayModal();
+            showModeToast(appState.currentMode, 'Pedidos conservados.');
+        });
+    }
+
+    if (changeDayCancelBtn) {
+        changeDayCancelBtn.addEventListener('click', () => {
+            if (modeBeforeChange) {
+                appState.currentMode = modeBeforeChange;
+                modeSwitcher.value   = modeBeforeChange;
+            }
+            closeChangeDayModal();
+        });
+    }
+
+    function closeChangeDayModal() {
+        if (changeDayModal) changeDayModal.style.display = 'none';
+        if (modeSwitcher) modeSwitcher.value = appState.currentMode;
+        pendingNewMode = null;
+    }
 
     kitchenNumberInput.addEventListener('change', () => {
         appState.numeroCocina = kitchenNumberInput.value.trim();
