@@ -259,11 +259,16 @@ const SalesReportManager = (() => {
             </div>
 
             <!-- KPI Cards Grid -->
-            <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+            <div class="grid grid-cols-2 md:grid-cols-5 gap-3 mb-6">
                 <div class="bg-white p-4 rounded-xl border border-gray-200">
                     <span class="text-[10px] font-bold uppercase text-gray-400 block">Total Facturado</span>
                     <span class="text-xl font-bold text-gray-900 mt-1 block">${formatCurrency(report.totalRecaudado)}</span>
-                    <span class="text-[10px] text-gray-400">Total acumulado en el turno</span>
+                    <span class="text-[10px] text-gray-400">Total consumos del turno</span>
+                </div>
+                <div class="bg-white p-4 rounded-xl border border-emerald-200 bg-emerald-50/30">
+                    <span class="text-[10px] font-bold uppercase text-emerald-600 block">Propina Acumulada</span>
+                    <span class="text-xl font-bold text-emerald-700 mt-1 block">${formatCurrency(report.totalPropina || 0)}</span>
+                    <span class="text-[10px] text-emerald-600">Total propinas registradas</span>
                 </div>
                 <div class="bg-white p-4 rounded-xl border border-gray-200">
                     <span class="text-[10px] font-bold uppercase text-gray-400 block">Unidades Vendidas</span>
@@ -573,7 +578,7 @@ const SalesReportManager = (() => {
         }
         .kpi-grid {
             display: grid;
-            grid-template-columns: repeat(4, 1fr);
+            grid-template-columns: repeat(5, 1fr);
             gap: 8px;
             margin-bottom: 12px;
             page-break-inside: avoid;
@@ -664,8 +669,9 @@ const SalesReportManager = (() => {
             </div>
         </div>
         <div style="text-align: right; border: 1.5px solid #0f172a; padding: 5px 10px; border-radius: 4px; background: #f8fafc;">
-            <div style="font-size: 8px; font-weight: 700; color: #475569; text-transform: uppercase;">Total Recaudado</div>
+            <div style="font-size: 8px; font-weight: 700; color: #475569; text-transform: uppercase;">Recaudado Total</div>
             <div style="font-size: 16px; font-weight: 900; color: #0f172a;">${formatCurrency(report.totalRecaudado)}</div>
+            <div style="font-size: 9px; font-weight: 800; color: #059669; text-transform: uppercase; margin-top: 2px;">Propina: ${formatCurrency(report.totalPropina || 0)}</div>
         </div>
     </div>
 
@@ -674,6 +680,10 @@ const SalesReportManager = (() => {
         <div class="kpi-box">
             <div class="kpi-label">Facturación Total</div>
             <div class="kpi-value">${formatCurrency(report.totalRecaudado)}</div>
+        </div>
+        <div class="kpi-box" style="background: #ecfdf5; border-color: #a7f3d0;">
+            <div class="kpi-label" style="color: #047857;">Total Propina</div>
+            <div class="kpi-value" style="color: #065f46;">${formatCurrency(report.totalPropina || 0)}</div>
         </div>
         <div class="kpi-box">
             <div class="kpi-label">Unidades Vendidas</div>

@@ -6,14 +6,33 @@
   "scripts": {
     "start": "electron .",
     "build": "electron-builder --win nsis",
-    "test": "node tests/calculations.test.js && node tests/sales-report.test.js"
+    "test": "node tests/calculations.test.js && node tests/sales-report.test.js && node tests/edge-cases-and-stress.test.js"
   },
   "build": {
     "appId": "com.tuempresa.gestionmozos",
     "productName": "Sistema de Gestión para Mozos",
     "win": {
-      "target": "nsis"
-    }
+      "target": "nsis",
+      "icon": "assets/logo_rivera.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "allowElevation": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Sistema de Gestión para Mozos",
+      "installerIcon": "assets/logo_rivera.ico",
+      "uninstallerIcon": "assets/logo_rivera.ico",
+      "uninstallDisplayName": "Sistema de Gestión para Mozos",
+      "deleteAppDataOnUninstall": false,
+      "runAfterFinish": true
+    },
+    "files": [
+      "**/*",
+      "!dist/*",
+      "!tests/*"
+    ]
   },
   "devDependencies": {
     "electron": "^31.0.0",

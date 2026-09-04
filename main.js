@@ -7,7 +7,7 @@ function createWindow() {
     width: 1200,
     height: 800,
     autoHideMenuBar: true,
-    icon: path.join(__dirname, 'icono.ico'),
+    icon: path.join(__dirname, 'assets', 'logo_rivera.ico'),
     webPreferences: {
       // --- ESTAS LÍNEAS SON LA CLAVE DE LA CORRECCIÓN ---
       preload: path.join(__dirname, 'preload.js'), // Carga el script puente

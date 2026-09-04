@@ -21,44 +21,50 @@ function calculatePizzaPrice(pizza, prices) {
 }
 
 function calculateTotal(order, prices, currentMode) {
+    if (!order || !prices) return 0;
     let total = 0;
 
+    const pLibreH = Number(prices.pizzaLibreH) || 0;
+    const pLibreM = Number(prices.pizzaLibreM) || 0;
+    const pLibreG = Number(prices.pizzaLibreG) || 0;
+
     if (currentMode === 'jueves' || currentMode === 'sabado') {
-        total += (order.pizzaLibreH || 0) * prices.pizzaLibreH;
-        total += (order.pizzaLibreM || 0) * prices.pizzaLibreM;
-        total += (order.pizzaLibreG || 0) * prices.pizzaLibreG;
+        total += (Number(order.pizzaLibreH) || 0) * pLibreH;
+        total += (Number(order.pizzaLibreM) || 0) * pLibreM;
+        total += (Number(order.pizzaLibreG) || 0) * pLibreG;
     }
 
-    if (currentMode === 'martes')         total += (order.menu || 0) * prices.precioMenuMartes;
-    else if (currentMode === 'miercoles') total += (order.menu || 0) * prices.precioMenuMiercoles;
-    else if (currentMode === 'viernes')   total += (order.menu || 0) * prices.precioMenuViernes;
-    else if (currentMode === 'domingo')   total += (order.menu || 0) * prices.precioMenuDomingo;
+    if (currentMode === 'martes')         total += (Number(order.menu) || 0) * (Number(prices.precioMenuMartes) || 0);
+    else if (currentMode === 'miercoles') total += (Number(order.menu) || 0) * (Number(prices.precioMenuMiercoles) || 0);
+    else if (currentMode === 'viernes')   total += (Number(order.menu) || 0) * (Number(prices.precioMenuViernes) || 0);
+    else if (currentMode === 'domingo')   total += (Number(order.menu) || 0) * (Number(prices.precioMenuDomingo) || 0);
 
-    total += (order.empanadas || 0) * prices.empanada;
-    total += (order.menores   || 0) * (order.menorPrice || 0);
-    total += (order.postres   || 0) * prices.precioPostre;
+    total += (Number(order.empanadas) || 0) * (Number(prices.empanada) || 0);
+    total += (Number(order.menores)   || 0) * (Number(order.menorPrice) || 0);
+    total += (Number(order.postres)   || 0) * (Number(prices.precioPostre) || 0);
 
-    if (order.pizzasPersonalizadas) {
+    if (Array.isArray(order.pizzasPersonalizadas)) {
         order.pizzasPersonalizadas.forEach(pizza => {
             total += calculatePizzaPrice(pizza, prices);
         });
     }
 
-    if (order.beverages) {
+    if (Array.isArray(order.beverages) && Array.isArray(prices.beverages)) {
         order.beverages.forEach(bev => {
-            const priceInfo = prices.beverages.find(p => p.name === bev.name);
-            if (priceInfo) total += bev.quantity * priceInfo.price;
+            if (!bev || !bev.name) return;
+            const priceInfo = prices.beverages.find(p => p && p.name === bev.name);
+            if (priceInfo) total += (Number(bev.quantity) || 0) * (Number(priceInfo.price) || 0);
         });
     }
 
-    return total;
+    return Math.round(total * 100) / 100;
 }
 
-function calculateGrandTotal(tables, barOrders, prices, currentMode) {
+function calculateGrandTotal(tables = [], barOrders = [], prices = {}, currentMode = 'miercoles') {
     let grand = 0;
-    tables.forEach(t  => { grand += calculateTotal(t.order,     prices, currentMode); });
-    barOrders.forEach(o => { grand += calculateTotal(o.order, prices, currentMode); });
-    return grand;
+    (tables || []).forEach(t  => { if (t) grand += calculateTotal(t.order, prices, currentMode); });
+    (barOrders || []).forEach(o => { if (o) grand += calculateTotal(o.order, prices, currentMode); });
+    return Math.round(grand * 100) / 100;
 }
 
 function calculateTablePersons(order, currentMode) {
@@ -103,7 +109,10 @@ function generateSalesReport(tables = [], barOrders = [], prices = {}, currentMo
             title: `Mesa ${t.number || '?' }`,
             type: 'table',
             number: t.number,
-            order: t.order || {}
+            order: t.order || {},
+            isPaid: t.isPaid || false,
+            paidAmount: t.paidAmount || 0,
+            tipAmount: t.tipAmount || 0
         });
     });
     barOrders.forEach(b => {
@@ -112,11 +121,15 @@ function generateSalesReport(tables = [], barOrders = [], prices = {}, currentMo
             title: `Barra - ${b.clientName || 'Cliente'}`,
             type: 'bar',
             clientName: b.clientName,
-            order: b.order || {}
+            order: b.order || {},
+            isPaid: b.isPaid || false,
+            paidAmount: b.paidAmount || 0,
+            tipAmount: b.tipAmount || 0
         });
     });
 
     let totalRecaudado = 0;
+    let totalPropina = 0;
     let totalUnidades = 0;
     let totalPersonas = 0;
     let totalMesasConConsumo = 0;
@@ -161,6 +174,9 @@ function generateSalesReport(tables = [], barOrders = [], prices = {}, currentMo
         const ord = ent.order;
         const entTotal = calculateTotal(ord, prices, currentMode);
         totalRecaudado += entTotal;
+        if (ent.isPaid) {
+            totalPropina += (ent.tipAmount || 0);
+        }
 
         const entItems = [];
         let entUnits = 0;
@@ -506,6 +522,7 @@ function generateSalesReport(tables = [], barOrders = [], prices = {}, currentMo
     return {
         // Métricas Globales
         totalRecaudado,
+        totalPropina,
         totalUnidades,
         totalPersonas,
         totalMesasConConsumo,
@@ -543,6 +560,23 @@ function generateSalesReport(tables = [], barOrders = [], prices = {}, currentMo
     };
 }
 
+function calculateGrandTotalTip(tables = [], barOrders = []) {
+    let grandTip = 0;
+    (tables || []).forEach(t => {
+        if (t && t.isPaid) {
+            const val = parseFloat(t.tipAmount);
+            if (!isNaN(val)) grandTip += val;
+        }
+    });
+    (barOrders || []).forEach(b => {
+        if (b && b.isPaid) {
+            const val = parseFloat(b.tipAmount);
+            if (!isNaN(val)) grandTip += val;
+        }
+    });
+    return Math.round(grandTip * 100) / 100;
+}
+
 // Exportar para Node.js (tests), sin romper el uso en browser
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = {
@@ -550,6 +584,7 @@ if (typeof module !== 'undefined' && module.exports) {
         calculatePizzaPrice,
         calculateTotal,
         calculateGrandTotal,
+        calculateGrandTotalTip,
         calculateTablePersons,
         calculateGrandTotalPersons,
         getModeMenuPrice,

@@ -126,6 +126,22 @@ document.addEventListener('DOMContentLoaded', async () => {
     const passwordCancelBtn   = document.getElementById('password-cancel-btn');
     const totalModalAmount    = document.getElementById('total-modal-amount');
 
+    // Propina & Pago DOM
+    const payBtnIcon                = document.getElementById('pay-btn-icon');
+    const payBtnText                = document.getElementById('pay-btn-text');
+    const modalTipDetail            = document.getElementById('modal-tip-detail');
+    const modalTipAmount            = document.getElementById('modal-tip-amount');
+    
+    // Modal Pago
+    const paymentModal              = document.getElementById('payment-modal');
+    const closePaymentModalBtn       = document.getElementById('close-payment-modal-btn');
+    const paymentModalTableTotal    = document.getElementById('payment-modal-table-total');
+    const paymentAmountInput        = document.getElementById('payment-amount-input');
+    const paymentModalCalculatedTip = document.getElementById('payment-modal-calculated-tip');
+    const paymentUnpayBtn           = document.getElementById('payment-unpay-btn');
+    const paymentConfirmBtn         = document.getElementById('payment-confirm-btn');
+    const totalModalPropinaCount    = document.getElementById('total-modal-propina-count');
+
     // Conteo de Personas DOM
     const totalPersonasCard        = document.getElementById('total-personas-card');
     const totalPersonasCount       = document.getElementById('total-personas-count');
@@ -226,7 +242,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         updateTotalPersonsUI();
     }
 
-    // ── CONTEO DE PERSONAS ───────────────────────────────────────────────────
+    // ── CONTEO DE PERSONAS Y PROPINAS ─────────────────────────────────────────
     function updateTotalPersonsUI() {
         const mode = appState.currentMode;
         const isExcluded = mode === 'jueves' || mode === 'sabado';
@@ -270,7 +286,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         appState.tables.forEach(table => {
             const el = document.createElement('div');
             el.id = table.id;
-            el.className = 'mesa absolute bg-blue-500 border-2 border-blue-700 rounded-lg flex items-center justify-center text-white font-bold text-2xl cursor-grab select-none';
+            const isPaid = table.isPaid || false;
+            const total = calculateTotal(table.order, appState.prices, appState.currentMode);
+            const tip = table.tipAmount || 0;
+
+            const bgClass = isPaid ? 'bg-emerald-600 border-emerald-800' : 'bg-blue-500 border-blue-700';
+
+            el.className = `mesa absolute ${bgClass} border-2 rounded-lg flex flex-col items-center justify-center text-white font-bold cursor-grab select-none p-1 shadow-md transition-colors duration-200`;
             el.style.left   = `${table.x}px`;
             el.style.top    = `${table.y}px`;
             el.style.width  = `${table.width}px`;
@@ -278,12 +300,19 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             const persons = calculateTablePersons(table.order, appState.currentMode);
             const numEl = document.createElement('div');
-            numEl.className = 'text-center flex flex-col items-center justify-center pointer-events-none';
-            if (persons > 0 && appState.currentMode !== 'jueves' && appState.currentMode !== 'sabado') {
-                numEl.innerHTML = `<span class="leading-none text-2xl font-bold">${escapeHtml(table.number)}</span><span class="text-xs bg-blue-900 bg-opacity-70 px-1.5 py-0.5 rounded-full mt-1 flex items-center gap-1 font-semibold">👥 ${persons}</span>`;
-            } else {
-                numEl.innerHTML = `<span class="leading-none text-2xl font-bold">${escapeHtml(table.number)}</span>`;
+            numEl.className = 'text-center flex flex-col items-center justify-center pointer-events-none w-full';
+
+            let infoSubHtml = '';
+            if (isPaid) {
+                infoSubHtml = `<div class="text-[10px] bg-emerald-950 bg-opacity-70 px-1.5 py-0.5 rounded-md mt-0.5 font-medium leading-tight text-center w-full">
+                    <div>Total: $${formatPrice(total)}</div>
+                    <div class="font-bold text-emerald-200">Propina: $${formatPrice(tip)}</div>
+                </div>`;
+            } else if (persons > 0 && appState.currentMode !== 'jueves' && appState.currentMode !== 'sabado') {
+                infoSubHtml = `<span class="text-xs bg-blue-900 bg-opacity-70 px-1.5 py-0.5 rounded-full mt-1 flex items-center gap-1 font-semibold">👥 ${persons}</span>`;
             }
+
+            numEl.innerHTML = `<span class="leading-none text-2xl font-bold">${escapeHtml(table.number)}</span>${infoSubHtml}`;
 
             const resizerEl = document.createElement('div');
             resizerEl.className = 'resizer';
@@ -408,6 +437,33 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         renderOrderList();
         updateTotal();
+
+        if (activeEntity) {
+            const isPaid = activeEntity.isPaid || false;
+            const tip = activeEntity.tipAmount || 0;
+
+            if (payBtnIcon) payBtnIcon.textContent = isPaid ? '✅' : '💳';
+            if (payBtnText) payBtnText.textContent = isPaid ? 'Pagado' : 'Marcar Pagado';
+
+            if (cleanOrderBtn) {
+                if (isPaid) {
+                    cleanOrderBtn.classList.remove('bg-emerald-600', 'hover:bg-emerald-700', 'bg-yellow-500', 'hover:bg-yellow-600');
+                    cleanOrderBtn.classList.add('bg-emerald-700', 'hover:bg-emerald-800');
+                } else {
+                    cleanOrderBtn.classList.remove('bg-emerald-700', 'hover:bg-emerald-800', 'bg-yellow-500', 'hover:bg-yellow-600');
+                    cleanOrderBtn.classList.add('bg-emerald-600', 'hover:bg-emerald-700');
+                }
+            }
+
+            if (modalTipDetail) {
+                if (isPaid && tip >= 0) {
+                    if (modalTipAmount) modalTipAmount.textContent = `$${formatPrice(tip)}`;
+                    modalTipDetail.classList.remove('hidden');
+                } else {
+                    modalTipDetail.classList.add('hidden');
+                }
+            }
+        }
     }
 
     function updateTotal() {
@@ -816,9 +872,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         changeDayClearBtn.addEventListener('click', () => {
             if (!pendingNewMode) return;
             appState.currentMode = pendingNewMode;
-            // Limpiar los pedidos del día anterior en mesas y barra
+            // Limpiar los pedidos del día anterior y resetear estado de pago en mesas y barra
             appState.tables.forEach(t => {
                 t.order = getNewOrderObject();
+                t.isPaid = false;
+                t.paidAmount = 0;
+                t.tipAmount = 0;
             });
             appState.barOrders = [];
 
@@ -1008,10 +1067,90 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     });
 
-    cleanOrderBtn.addEventListener('click', () => {
+    function openPaymentModal() {
         if (!activeEntity) return;
-        openPasswordModal('clearSingleOrder');
-    });
+        const currentTotal = calculateTotal(activeEntity.order, appState.prices, appState.currentMode);
+        
+        if (paymentModalTableTotal) paymentModalTableTotal.textContent = `$${formatPrice(currentTotal)}`;
+        
+        const existingPaid = activeEntity.paidAmount;
+        if (paymentAmountInput) {
+            paymentAmountInput.value = (existingPaid !== undefined && existingPaid !== null && existingPaid > 0)
+                ? existingPaid
+                : (currentTotal > 0 ? currentTotal : '');
+        }
+        
+        const initialPaid = parseFloat(paymentAmountInput ? paymentAmountInput.value : 0) || 0;
+        const initialTip  = Math.max(0, initialPaid - currentTotal);
+        if (paymentModalCalculatedTip) paymentModalCalculatedTip.textContent = `$${formatPrice(initialTip)}`;
+
+        if (paymentUnpayBtn) {
+            if (activeEntity.isPaid) {
+                paymentUnpayBtn.classList.remove('hidden');
+            } else {
+                paymentUnpayBtn.classList.add('hidden');
+            }
+        }
+
+        if (paymentModal) paymentModal.style.display = 'flex';
+    }
+
+    function closePaymentModal() {
+        if (paymentModal) paymentModal.style.display = 'none';
+    }
+
+    if (cleanOrderBtn) {
+        cleanOrderBtn.addEventListener('click', () => {
+            if (!activeEntity) return;
+            openPaymentModal();
+        });
+    }
+
+    if (paymentAmountInput) {
+        paymentAmountInput.addEventListener('input', () => {
+            if (!activeEntity) return;
+            const currentTotal = calculateTotal(activeEntity.order, appState.prices, appState.currentMode);
+            const paid = parseFloat(paymentAmountInput.value) || 0;
+            const tip  = Math.max(0, paid - currentTotal);
+            if (paymentModalCalculatedTip) paymentModalCalculatedTip.textContent = `$${formatPrice(tip)}`;
+        });
+    }
+
+    if (paymentConfirmBtn) {
+        paymentConfirmBtn.addEventListener('click', () => {
+            if (!activeEntity) return;
+            const currentTotal = calculateTotal(activeEntity.order, appState.prices, appState.currentMode);
+            let paid = parseFloat(paymentAmountInput.value);
+            if (isNaN(paid)) paid = currentTotal;
+
+            activeEntity.isPaid = true;
+            activeEntity.paidAmount = paid;
+            activeEntity.tipAmount = Math.max(0, paid - currentTotal);
+
+            saveState();
+            updateOrderModalUI();
+            renderAll();
+            closePaymentModal();
+        });
+    }
+
+    if (paymentUnpayBtn) {
+        paymentUnpayBtn.addEventListener('click', () => {
+            if (!activeEntity) return;
+            activeEntity.isPaid = false;
+            activeEntity.paidAmount = 0;
+            activeEntity.tipAmount = 0;
+
+            saveState();
+            updateOrderModalUI();
+            renderAll();
+            closePaymentModal();
+        });
+    }
+
+    if (closePaymentModalBtn) {
+        closePaymentModalBtn.addEventListener('click', closePaymentModal);
+    }
 
     clearAllOrdersBtn.addEventListener('click', () => {
         openPasswordModal('clearAllOrders');
@@ -1029,10 +1168,18 @@ document.addEventListener('DOMContentLoaded', async () => {
             closePasswordModal(); closeOrderModal();
         } else if (actionToConfirm === 'clearSingleOrder') {
             activeEntity.order = getNewOrderObject();
+            activeEntity.isPaid = false;
+            activeEntity.paidAmount = 0;
+            activeEntity.tipAmount = 0;
             updateOrderModalUI();
             closePasswordModal();
         } else if (actionToConfirm === 'clearAllOrders') {
-            appState.tables.forEach(t => { t.order = getNewOrderObject(); });
+            appState.tables.forEach(t => {
+                t.order = getNewOrderObject();
+                t.isPaid = false;
+                t.paidAmount = 0;
+                t.tipAmount = 0;
+            });
             appState.barOrders = [];
             saveState(); renderAll(); closePasswordModal();
         }
@@ -1132,6 +1279,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     showTotalBtn.addEventListener('click', () => {
         const grand = calculateGrandTotal(appState.tables, appState.barOrders, appState.prices, appState.currentMode);
         totalModalAmount.textContent = `$${formatPrice(grand)}`;
+
+        const grandTip = calculateGrandTotalTip(appState.tables, appState.barOrders);
+        if (totalModalPropinaCount) totalModalPropinaCount.textContent = `$${formatPrice(grandTip)}`;
 
         const isExcluded = appState.currentMode === 'jueves' || appState.currentMode === 'sabado';
         if (totalModalPersonasBox) {

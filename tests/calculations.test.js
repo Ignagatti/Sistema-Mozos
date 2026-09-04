@@ -350,6 +350,67 @@ test('reporte sábado con pizza libre y pizzas personalizadas', () => {
     assertEqual(soldNames.includes('Pizza Entera (Muzzarella, Jamon)'), true);
 });
 
+test('cálculo de propina acumulada (totalPropina y calculateGrandTotalTip)', () => {
+    const { calculateGrandTotalTip } = require('../js/calculations.js');
+    const tables = [
+        {
+            id: 't-1',
+            number: '1',
+            order: emptyOrder({ menu: 2 }), // Total: 2*8000 = 16000
+            isPaid: true,
+            paidAmount: 18000,
+            tipAmount: 2000
+        },
+        {
+            id: 't-2',
+            number: '2',
+            order: emptyOrder({ menu: 1 }), // Total: 8000
+            isPaid: false,
+            paidAmount: 0,
+            tipAmount: 0
+        }
+    ];
+    const barOrders = [
+        {
+            id: 'b-1',
+            clientName: 'Juan',
+            order: emptyOrder({ empanadas: 2 }), // Total: 1000
+            isPaid: true,
+            paidAmount: 1500,
+            tipAmount: 500
+        }
+    ];
+
+    const grandTip = calculateGrandTotalTip(tables, barOrders);
+    assertEqual(grandTip, 2500);
+
+    const report = generateSalesReport(tables, barOrders, prices, 'miercoles');
+    assertEqual(report.totalPropina, 2500);
+});
+
+test('reseteo de mesa al cambiar de día / limpiar pedidos', () => {
+    const { calculateGrandTotalTip } = require('../js/calculations.js');
+    const table = {
+        id: 't-1',
+        number: '1',
+        order: emptyOrder({ menu: 2 }),
+        isPaid: true,
+        paidAmount: 20000,
+        tipAmount: 4000
+    };
+
+    // Simulación de limpieza de mesa al cambiar de día
+    table.order = emptyOrder();
+    table.isPaid = false;
+    table.paidAmount = 0;
+    table.tipAmount = 0;
+
+    assertEqual(table.isPaid, false);
+    assertEqual(table.paidAmount, 0);
+    assertEqual(table.tipAmount, 0);
+    assertEqual(calculateGrandTotalTip([table], []), 0);
+});
+
 // ── Resultado final ──────────────────────────────────────────────────────────
 console.log(`\n${passed} pasaron, ${failed} fallaron\n`);
 if (failed > 0) process.exit(1);
