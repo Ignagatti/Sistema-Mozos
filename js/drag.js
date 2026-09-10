@@ -35,7 +35,7 @@ function makeDraggable(element, tables, mapaClub, saveStateFn) {
     }
 }
 
-function makeResizable(element, resizer, tables, saveStateFn) {
+function makeResizable(element, resizer, tables, saveStateFn, onResizeEndFn) {
     let origW = 0, origH = 0, origX = 0, origY = 0;
 
     resizer.addEventListener('mousedown', function(e) {
@@ -64,6 +64,9 @@ function makeResizable(element, resizer, tables, saveStateFn) {
             if (!isNaN(nw) && nw > 0) table.width  = nw;
             if (!isNaN(nh) && nh > 0) table.height = nh;
             saveStateFn();
+            if (typeof onResizeEndFn === 'function') {
+                onResizeEndFn(table);
+            }
         }
     }
 }

@@ -292,27 +292,52 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             const bgClass = isPaid ? 'bg-emerald-600 border-emerald-800' : 'bg-blue-500 border-blue-700';
 
-            el.className = `mesa absolute ${bgClass} border-2 rounded-lg flex flex-col items-center justify-center text-white font-bold cursor-grab select-none p-1 shadow-md transition-colors duration-200`;
+            el.className = `mesa absolute ${bgClass} border-2 rounded-lg flex flex-col items-center justify-center text-white font-bold cursor-grab select-none p-1 shadow-md transition-colors duration-200 overflow-hidden`;
             el.style.left   = `${table.x}px`;
             el.style.top    = `${table.y}px`;
             el.style.width  = `${table.width}px`;
             el.style.height = `${table.height}px`;
 
+            const w = table.width || 100;
+            const h = table.height || 100;
+
+            let fontClass = 'text-2xl';
+            if (w < 70 || h < 70) {
+                fontClass = 'text-sm';
+            } else if (w < 95 || h < 90) {
+                fontClass = 'text-lg';
+            }
+
             const persons = calculateTablePersons(table.order, appState.currentMode);
             const numEl = document.createElement('div');
-            numEl.className = 'text-center flex flex-col items-center justify-center pointer-events-none w-full';
+            numEl.className = 'text-center flex flex-col items-center justify-center pointer-events-none w-full px-0.5';
 
             let infoSubHtml = '';
             if (isPaid) {
-                infoSubHtml = `<div class="text-[10px] bg-emerald-950 bg-opacity-70 px-1.5 py-0.5 rounded-md mt-0.5 font-medium leading-tight text-center w-full">
-                    <div>Total: $${formatPrice(total)}</div>
-                    <div class="font-bold text-emerald-200">Propina: $${formatPrice(tip)}</div>
-                </div>`;
+                if (w < 70 || h < 65) {
+                    // Mesa muy pequeña: número compacto + total resumido en 1 sola línea
+                    infoSubHtml = `<div class="text-[9px] bg-emerald-950 bg-opacity-70 px-1 py-0.5 rounded mt-0.5 font-medium leading-none text-center truncate max-w-full" title="Total: $${formatPrice(total)}${tip > 0 ? ' | Propina: $' + formatPrice(tip) : ''}">
+                        ✓ $${formatPrice(total)}
+                    </div>`;
+                } else if (w < 95 || h < 85) {
+                    // Mesa mediana: compacto
+                    infoSubHtml = `<div class="text-[9px] bg-emerald-950 bg-opacity-70 px-1 py-0.5 rounded mt-0.5 font-medium leading-tight text-center w-full truncate" title="Total: $${formatPrice(total)}${tip > 0 ? ' | Propina: $' + formatPrice(tip) : ''}">
+                        <div>$${formatPrice(total)}</div>
+                        ${tip > 0 ? `<div class="font-bold text-emerald-200">P: $${formatPrice(tip)}</div>` : ''}
+                    </div>`;
+                } else {
+                    // Mesa normal / grande: detalle completo
+                    infoSubHtml = `<div class="text-[10px] bg-emerald-950 bg-opacity-70 px-1.5 py-0.5 rounded-md mt-0.5 font-medium leading-tight text-center w-full">
+                        <div>Total: $${formatPrice(total)}</div>
+                        <div class="font-bold text-emerald-200">Propina: $${formatPrice(tip)}</div>
+                    </div>`;
+                }
             } else if (persons > 0 && appState.currentMode !== 'jueves' && appState.currentMode !== 'sabado') {
-                infoSubHtml = `<span class="text-xs bg-blue-900 bg-opacity-70 px-1.5 py-0.5 rounded-full mt-1 flex items-center gap-1 font-semibold">👥 ${persons}</span>`;
+                const badgeTextSize = (w < 70 || h < 70) ? 'text-[9px] px-1 py-0.2' : (w < 95 || h < 90) ? 'text-[10px] px-1.5 py-0.5' : 'text-xs px-1.5 py-0.5';
+                infoSubHtml = `<span class="${badgeTextSize} bg-blue-900 bg-opacity-70 rounded-full mt-0.5 flex items-center justify-center gap-0.5 font-semibold leading-none">👥 ${persons}</span>`;
             }
 
-            numEl.innerHTML = `<span class="leading-none text-2xl font-bold">${escapeHtml(table.number)}</span>${infoSubHtml}`;
+            numEl.innerHTML = `<span class="leading-none ${fontClass} font-bold truncate max-w-full">${escapeHtml(table.number)}</span>${infoSubHtml}`;
 
             const resizerEl = document.createElement('div');
             resizerEl.className = 'resizer';
@@ -326,7 +351,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 openOrderModal(table.id, 'table');
             });
             makeDraggable(el, appState.tables, mapaClub, saveState);
-            makeResizable(el, resizerEl, appState.tables, saveState);
+            makeResizable(el, resizerEl, appState.tables, saveState, () => renderTables());
         });
     }
 
