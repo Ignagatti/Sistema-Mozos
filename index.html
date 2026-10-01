@@ -149,11 +149,20 @@
                 </select>
             </div>
 
+            <div class="mb-4">
+                <label for="mozo-switcher" class="block text-sm font-medium text-gray-700 mb-1">Mozo Actual</label>
+                <select id="mozo-switcher" class="w-full p-2 border border-gray-300 rounded-lg">
+                    <option value="Mozo 1">Mozo 1</option>
+                    <option value="Mozo 2">Mozo 2</option>
+                    <option value="Mozo 3">Mozo 3</option>
+                    <option value="Mozo 4">Mozo 4</option>
+                </select>
+            </div>
+
             <!-- Conteo Total de Personas (Solo visible días excepto Jueves y Viernes) -->
             <div id="total-personas-card" class="mb-4 bg-indigo-50 border-2 border-indigo-200 rounded-xl p-3 shadow-sm transition-all duration-300">
                 <div class="flex items-center justify-between">
                     <div class="flex items-center space-x-2">
-                        <span class="text-xl">👥</span>
                         <span class="text-xs font-bold uppercase text-indigo-700 tracking-wider">Personas (Mesas)</span>
                     </div>
                     <span id="total-personas-count" class="text-2xl font-extrabold text-indigo-900">0</span>
@@ -190,7 +199,7 @@
                 
                 <button id="clear-all-orders-btn" class="w-full bg-red-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-red-700 transition duration-300 flex items-center justify-center space-x-2">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm4 0a1 1 0 012 0v6a1 1 0 11-2 0V8z" clip-rule="evenodd" /></svg>
-                    <span>Limpiar Pedidos</span>
+                    <span>Cierre de Caja General (Mozo 1)</span>
                 </button>
             </div>
 
@@ -218,11 +227,15 @@
                 <div id="modal-title-container"></div>
                 <button id="close-order-modal-btn" class="text-gray-500 hover:text-gray-800">&times;</button>
             </div>
+            <div id="mozo-lock-banner" class="hidden bg-amber-50 border-l-4 border-amber-500 text-amber-900 p-3 mx-4 mt-3 rounded-md text-xs font-bold flex items-center justify-between shadow-sm">
+                <span id="mozo-lock-message">Mesa bloqueada: Asignada a otro mozo.</span>
+                <span class="text-xs bg-amber-200 text-amber-900 px-2 py-0.5 rounded font-mono">SOLO LECTURA</span>
+            </div>
             <div class="p-6 overflow-y-auto">
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                     <!-- SECCIÓN PIZZA LIBRE -->
                     <div id="pizza-libre-section" class="bg-gray-100 p-4 rounded-lg">
-                        <h3 class="font-semibold mb-2">🍕 Pizza Libre</h3>
+                        <h3 class="font-semibold mb-2">Pizza Libre</h3>
                         <div class="space-y-3">
                             <div class="flex items-center justify-between">
                                 <span class="text-lg">Hombres</span>
@@ -253,7 +266,7 @@
 
                     <!-- SECCIÓN MENÚ -->
                     <div id="menu-section" class="bg-gray-100 p-4 rounded-lg">
-                        <h3 class="font-semibold mb-2">🍽️ Menú</h3>
+                        <h3 class="font-semibold mb-2">Menú</h3>
                         <div class="flex items-center justify-between mt-6">
                             <span class="text-lg">Personas</span>
                             <div class="flex items-center space-x-3">
@@ -265,7 +278,7 @@
                     </div>
                     <!-- SECCIÓN MENORES (Siempre Visible) -->
                     <div id="menores-section" class="bg-gray-100 p-4 rounded-lg">
-                        <h3 class="font-semibold mb-2">🧒 Menores</h3>
+                        <h3 class="font-semibold mb-2">Menores</h3>
                         <div class="space-y-3">
                             <div class="flex items-center justify-between">
                                 <span class="text-lg">Cantidad</span>
@@ -283,7 +296,7 @@
                     </div>
                     <!-- SECCIÓN EMPANADAS -->
                     <div id="empanadas-section" class="bg-gray-100 p-4 rounded-lg">
-                        <h3 class="font-semibold mb-2">🥟 Empanadas</h3>
+                        <h3 class="font-semibold mb-2">Empanadas</h3>
                         <div class="flex items-center justify-between mt-6">
                             <span class="text-lg">Cantidad</span>
                             <div class="flex items-center space-x-3">
@@ -295,7 +308,7 @@
                     </div>
                     <!-- SECCIÓN POSTRES -->
                     <div id="postres-section" class="bg-gray-100 p-4 rounded-lg">
-                        <h3 class="font-semibold mb-2">🍰 Postres</h3>
+                        <h3 class="font-semibold mb-2">Postres</h3>
                         <div class="flex items-center justify-between mt-6">
                             <span class="text-lg">Cantidad</span>
                             <div class="flex items-center space-x-3">
@@ -309,7 +322,7 @@
 
                 <!-- SECCIÓN CONSTRUCTOR DE PIZZAS (Solo Sábado) -->
                 <div id="custom-pizza-builder-section" class="mb-6 p-4 bg-gray-100 rounded-lg">
-                    <h3 class="font-semibold mb-3 text-lg">🍕 Armar Pizza por Gusto</h3>
+                    <h3 class="font-semibold mb-3 text-lg">Armar Pizza por Gusto</h3>
                     <div class="pizza-builder space-y-3">
                         <div>
                             <label class="block text-sm font-medium text-gray-700">Tamaño</label>
@@ -339,7 +352,7 @@
                 </div>
 
                 <div class="mb-6">
-                    <h3 class="font-semibold mb-2">🥤 Bebidas</h3>
+                    <h3 class="font-semibold mb-2">Bebidas</h3>
                     <div class="flex items-center space-x-2">
                         <select id="beverage-select" class="flex-grow p-2 border border-gray-300 rounded-lg"></select>
                         <input type="number" id="beverage-quantity" value="1" min="1" class="w-20 p-2 border rounded-lg">
@@ -347,14 +360,14 @@
                     </div>
                 </div>
                 <div>
-                    <h3 class="font-semibold mb-2">📝 Resumen del Pedido</h3>
+                    <h3 class="font-semibold mb-2">Resumen del Pedido</h3>
                     <div id="modal-order-list" class="bg-gray-50 p-4 rounded-lg min-h-[100px] border space-y-2"></div>
                 </div>
             </div>
             <div class="flex justify-between items-center p-4 border-t bg-gray-50 mt-auto">
                 <div class="flex space-x-2 flex-wrap gap-1">
                      <button id="clean-order-btn" class="bg-emerald-600 text-white font-semibold py-2 px-3 rounded-lg hover:bg-emerald-700 text-sm flex items-center space-x-1 shadow-sm transition">
-                         <span id="pay-btn-icon">💳</span>
+                         <span id="pay-btn-icon"></span>
                          <span id="pay-btn-text">Marcar Pagado</span>
                      </button>
                      <button id="print-single-account-btn" class="bg-purple-600 text-white font-semibold py-2 px-3 rounded-lg hover:bg-purple-700 text-sm">Imprimir</button>
@@ -458,12 +471,12 @@
                         </div>
                         <div class="flex items-center space-x-2">
                              <select id="new-beverage-category" class="flex-grow p-2 border border-gray-300 rounded-lg">
-                                <option value="cervezas">🍺 Cervezas</option>
-                                <option value="gaseosas">🥤 Gaseosas y Saborizadas</option>
-                                <option value="aguas">💧 Aguas y Sodas</option>
-                                <option value="tragos">🍹 Tragos</option>
-                                <option value="vinos">🍷 Vinos</option>
-                                <option value="otras">🍸 Otras Bebidas</option>
+                                <option value="cervezas">Cervezas</option>
+                                <option value="gaseosas">Gaseosas y Saborizadas</option>
+                                <option value="aguas">Aguas y Sodas</option>
+                                <option value="tragos">Tragos</option>
+                                <option value="vinos">Vinos</option>
+                                <option value="otras">Otras Bebidas</option>
                             </select>
                             <button id="add-new-beverage-price-btn" class="bg-blue-600 text-white p-2 rounded-lg hover:bg-blue-700">Agregar</button>
                         </div>
@@ -480,7 +493,7 @@
         <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm mx-4 p-6 border border-gray-200">
             <div class="flex justify-between items-center pb-3 mb-4 border-b">
                 <h3 class="text-xl font-bold text-gray-900 flex items-center gap-2">
-                    <span>💰</span> <span>Registrar Pago</span>
+                    <span>Registrar Pago</span>
                 </h3>
                 <button id="close-payment-modal-btn" class="text-gray-400 hover:text-gray-700 text-2xl font-bold leading-none">&times;</button>
             </div>
@@ -656,6 +669,51 @@
         </div>
     </div>
 
+
+    <!-- Modal de Alerta Naranja: Duplicado Cercano (< 60 Segundos) -->
+    <div id="duplicate-warning-modal" class="fixed inset-0 z-50 items-center justify-center hidden modal-backdrop">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden border-2 border-amber-500">
+            <div class="bg-amber-500 text-white px-6 py-4 flex items-center space-x-3">
+                <span class="text-xs bg-amber-700 text-white px-2 py-1 rounded font-bold uppercase">Aviso</span>
+                <div>
+                    <h3 class="font-bold text-lg leading-tight">Alerta de Duplicado Cercano</h3>
+                    <p class="text-xs text-amber-100">Confirmación requerida (&lt; 60s)</p>
+                </div>
+            </div>
+            <div class="p-6 space-y-3">
+                <p id="duplicate-warning-message" class="text-sm text-gray-800 font-medium leading-relaxed"></p>
+                <div class="bg-amber-50 border border-amber-200 rounded-lg p-3 text-xs text-amber-900 font-semibold">
+                    ¿Estás seguro de que deseas agregar este producto de nuevo a la mesa?
+                </div>
+            </div>
+            <div class="p-4 bg-gray-50 border-t border-gray-200 flex justify-end space-x-3">
+                <button id="duplicate-cancel-btn" class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold py-2 px-4 rounded-xl text-xs transition">
+                    Cancelar
+                </button>
+                <button id="duplicate-confirm-btn" class="bg-amber-600 hover:bg-amber-700 text-white font-bold py-2 px-5 rounded-xl text-xs transition shadow-md">
+                    Sí, Agregar Producto
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Alerta Personalizada del Sistema (Reemplazo de alert() de Windows) -->
+    <div id="custom-system-alert-modal" class="fixed inset-0 z-50 items-center justify-center hidden modal-backdrop">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden border border-gray-200">
+            <div class="bg-slate-900 text-white px-6 py-4 flex items-center justify-between">
+                <h3 id="custom-alert-title" class="font-bold text-base leading-tight uppercase tracking-wider">Aviso del Sistema</h3>
+                <button id="close-custom-alert-x-btn" class="text-gray-400 hover:text-white text-xl font-bold leading-none">&times;</button>
+            </div>
+            <div class="p-6 space-y-3">
+                <p id="custom-alert-message" class="text-sm text-gray-800 font-medium leading-relaxed"></p>
+            </div>
+            <div class="p-4 bg-gray-50 border-t border-gray-200 flex justify-end">
+                <button id="custom-alert-ok-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded-lg text-sm transition shadow-sm">
+                    Aceptar
+                </button>
+            </div>
+        </div>
+    </div>
 
 <script src="js/calculations.js"></script>
 <script src="js/sales-report.js"></script>

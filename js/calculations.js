@@ -371,12 +371,12 @@ function generateSalesReport(tables = [], barOrders = [], prices = {}, currentMo
 
     // Categorías de bebidas agrupadas en el orden oficial del restaurante
     const BEV_CAT_CONFIG = [
-        { id: 'cervezas', label: 'Cervezas',               icon: '🍺', color: '#D97706' },
-        { id: 'gaseosas', label: 'Gaseosas y Saborizadas', icon: '🥤', color: '#DC2626' },
-        { id: 'aguas',    label: 'Aguas y Sodas',          icon: '💧', color: '#2563EB' },
-        { id: 'tragos',   label: 'Tragos',                 icon: '🍹', color: '#7C3AED' },
-        { id: 'vinos',    label: 'Vinos',                  icon: '🍷', color: '#9333EA' },
-        { id: 'otras',    label: 'Otras Bebidas',          icon: '🍸', color: '#64748B' }
+        { id: 'cervezas', label: 'Cervezas',               icon: '', color: '#D97706' },
+        { id: 'gaseosas', label: 'Gaseosas y Saborizadas', icon: '', color: '#DC2626' },
+        { id: 'aguas',    label: 'Aguas y Sodas',          icon: '', color: '#2563EB' },
+        { id: 'tragos',   label: 'Tragos',                 icon: '', color: '#7C3AED' },
+        { id: 'vinos',    label: 'Vinos',                  icon: '', color: '#9333EA' },
+        { id: 'otras',    label: 'Otras Bebidas',          icon: '', color: '#64748B' }
     ];
 
     const beverageCategoryBreakdown = BEV_CAT_CONFIG.map(cat => {
@@ -474,12 +474,12 @@ function generateSalesReport(tables = [], barOrders = [], prices = {}, currentMo
         if (menuUnits === 0) sinVentasList.push({ name: 'Menú del Día', category: 'Comida', price: menuPrice, icon: '', reason: '0 unidades' });
     }
 
-    if (empanadaUnits === 0) sinVentasList.push({ name: 'Empanadas', category: 'Empanadas', price: prices.empanada || 0, icon: '🥟', reason: '0 unidades' });
-    if (postreUnits === 0) sinVentasList.push({ name: 'Postres', category: 'Postres', price: prices.precioPostre || 0, icon: '🍰', reason: '0 unidades' });
+    if (empanadaUnits === 0) sinVentasList.push({ name: 'Empanadas', category: 'Empanadas', price: prices.empanada || 0, icon: '', reason: '0 unidades' });
+    if (postreUnits === 0) sinVentasList.push({ name: 'Postres', category: 'Postres', price: prices.precioPostre || 0, icon: '', reason: '0 unidades' });
 
     const topProductoEstrella = topVendidos.length > 0 ? topVendidos[0] : null;
 
-    // 🧠 Análisis Estratégico de Inversión y Compras (En qué MÁS y en qué MENOS invertir)
+    // Análisis Estratégico de Inversión y Compras (En qué MÁS y en qué MENOS invertir)
     let acumuladoRecaudacion = 0;
     const itemsConAnalisis = topVendidos.map(item => {
         acumuladoRecaudacion += item.subtotal;
@@ -492,11 +492,11 @@ function generateSalesReport(tables = [], barOrders = [], prices = {}, currentMo
 
         if (pctAcumulado <= 75 || pctVenta >= 15 || item.units >= 8) {
             clasificacion = 'alta';
-            recomendacion = '⭐ Prioridad Máxima: Asegurar stock / Comprar por mayor para mejor margen';
+            recomendacion = 'Prioridad Máxima: Asegurar stock / Comprar por mayor para mejor margen';
             nivelInversion = 'Alta Prioridad (Más Invertir)';
         } else if (item.units <= 2) {
             clasificacion = 'baja';
-            recomendacion = '⚠️ Reducir compras: Mantener stock mínimo indispensable';
+            recomendacion = 'Reducir compras: Mantener stock mínimo indispensable';
             nivelInversion = 'Baja Prioridad (Menos Invertir)';
         }
 
@@ -522,7 +522,7 @@ function generateSalesReport(tables = [], barOrders = [], prices = {}, currentMo
         rubrosPrioritarios: [...categoryBreakdown].sort((a, b) => b.subtotal - a.subtotal)
     };
 
-    // 🍕 Ranking de Gustos de Pizza (Los que más salen y los que no salieron)
+    // Ranking de Gustos de Pizza (Los que más salen y los que no salieron)
     const pizzaToppingsRanking = Object.entries(customPizzaToppingsCount)
         .map(([name, count]) => {
             const pizzaPrice = (prices.preciosPizzas || []).find(p => p.name === name) || {};

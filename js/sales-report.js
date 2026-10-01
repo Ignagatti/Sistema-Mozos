@@ -787,12 +787,20 @@ const SalesReportManager = (() => {
                 } else if (result && result.canceled) {
                     return { success: false, canceled: true };
                 } else {
-                    alert('No se pudo guardar el archivo PDF: ' + (result?.error || 'Error desconocido'));
+                    if (typeof window !== 'undefined' && window.showSystemAlert) {
+                        window.showSystemAlert('No se pudo guardar el archivo PDF: ' + (result?.error || 'Error desconocido'), 'Error de PDF');
+                    } else {
+                        console.error('No se pudo guardar el archivo PDF:', result?.error);
+                    }
                     return { success: false, error: result?.error };
                 }
             } catch (err) {
                 console.error('Error al llamar savePDF:', err);
-                alert('Error al descargar PDF: ' + err.message);
+                if (typeof window !== 'undefined' && window.showSystemAlert) {
+                    window.showSystemAlert('Error al descargar PDF: ' + err.message, 'Error de PDF');
+                } else {
+                    console.error('Error al descargar PDF:', err.message);
+                }
                 return { success: false, error: err.message };
             }
         } else if (typeof document !== 'undefined') {

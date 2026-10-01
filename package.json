@@ -1,5 +1,5 @@
 {
-  "name": "sistema-gestion-mozos",
+  "name": "sistema-gestion-mozos-v2",
   "version": "1.0.0",
   "description": "Sistema de gestión de mesas y pedidos para mozos",
   "main": "main.js",
@@ -9,8 +9,8 @@
     "test": "node tests/calculations.test.js && node tests/sales-report.test.js && node tests/edge-cases-and-stress.test.js"
   },
   "build": {
-    "appId": "com.tuempresa.gestionmozos",
-    "productName": "Sistema de Gestión para Mozos",
+    "appId": "com.tuempresa.gestionmozos.v2",
+    "productName": "Sistema de Gestión para Mozos V2",
     "win": {
       "target": "nsis",
       "icon": "assets/logo_rivera.ico"
@@ -21,10 +21,10 @@
       "allowElevation": true,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
-      "shortcutName": "Sistema de Gestión para Mozos",
+      "shortcutName": "Sistema de Gestión para Mozos V2",
       "installerIcon": "assets/logo_rivera.ico",
       "uninstallerIcon": "assets/logo_rivera.ico",
-      "uninstallDisplayName": "Sistema de Gestión para Mozos",
+      "uninstallDisplayName": "Sistema de Gestión para Mozos V2",
       "deleteAppDataOnUninstall": false,
       "runAfterFinish": true
     },
@@ -39,6 +39,7 @@
     "electron-builder": "^24.0.0"
   },
   "dependencies": {
+    "dotenv": "^18.0.5",
     "pg": "^8.23.1"
   }
 }

@@ -15,5 +15,17 @@ contextBridge.exposeInMainWorld('electronAPI', {
   savePDF: (data) => ipcRenderer.invoke('save-pdf', data),
 
   // Función para mostrar archivo descargado en el explorador de archivos
-  showItemInFolder: (filePath) => ipcRenderer.send('show-item-in-folder', filePath)
+  showItemInFolder: (filePath) => ipcRenderer.send('show-item-in-folder', filePath),
+
+  // Carga inicial y sync cloud con Neon PostgreSQL DB
+  loadCloudData: () => ipcRenderer.invoke('load-cloud-data'),
+  syncCloudState: (snapshot) => ipcRenderer.invoke('sync-cloud-state', snapshot),
+
+  // Función para actualizar o eliminar precio de un producto en la BDD de Neon
+  updateProductPrice: (data) => ipcRenderer.invoke('update-product-price', data),
+  deleteProduct: (data) => ipcRenderer.invoke('delete-product', data),
+
+  // Función para realizar el Cierre de Caja General y cambio de jornada global en Neon DB
+  closeGlobalShift: () => ipcRenderer.invoke('close-global-shift')
 });
+

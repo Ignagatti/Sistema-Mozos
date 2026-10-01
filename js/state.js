@@ -1,59 +1,66 @@
 // Valores por defecto — se usan al arrancar y como base para el merge al cargar
 const DEFAULT_PRICES = {
-    pizzaLibreH: 10500, pizzaLibreM: 9500, pizzaLibreG: 10000,
-    empanada: 200, precioPostre: 0,
-    precioMenuMartes: 0, precioMenuMiercoles: 0, precioMenuViernes: 0, precioMenuDomingo: 0,
+    pizzaLibreH: 16000, pizzaLibreM: 16000, pizzaLibreG: 16000,
+    empanada: 1200, precioPostre: 1500,
+    precioMenuMartes: 5000, precioMenuMiercoles: 5000, precioMenuViernes: 5000, precioMenuDomingo: 6000,
     preciosPizzas: [
-        { name: 'Muzzarella', precioEntera: 0, precioMedia: 0 },
-        { name: 'Provenzal',  precioEntera: 0, precioMedia: 0 },
-        { name: 'Cebollada',  precioEntera: 0, precioMedia: 0 },
-        { name: 'Margarita',  precioEntera: 0, precioMedia: 0 },
-        { name: 'Rucula',     precioEntera: 0, precioMedia: 0 },
-        { name: 'Calabresa',  precioEntera: 0, precioMedia: 0 },
-        { name: 'Especial',   precioEntera: 0, precioMedia: 0 },
-        { name: 'Napolitana', precioEntera: 0, precioMedia: 0 },
-        { name: '3 Quesos',   precioEntera: 0, precioMedia: 0 },
-        { name: 'Roquefort',  precioEntera: 0, precioMedia: 0 },
-        { name: 'Anchoas',    precioEntera: 0, precioMedia: 0 }
+        { name: 'Muzzarella', precioEntera: 15000, precioMedia: 7500 },
+        { name: 'Provenzal',  precioEntera: 16000, precioMedia: 8000 },
+        { name: 'Cebollada',  precioEntera: 16000, precioMedia: 8000 },
+        { name: 'Margarita',  precioEntera: 16000, precioMedia: 8000 },
+        { name: 'Rucula',     precioEntera: 17000, precioMedia: 8500 },
+        { name: 'Calabresa',  precioEntera: 17000, precioMedia: 8500 },
+        { name: 'Especial',   precioEntera: 17000, precioMedia: 8500 },
+        { name: 'Napolitana', precioEntera: 17000, precioMedia: 8500 },
+        { name: '3 Quesos',   precioEntera: 18000, precioMedia: 9000 },
+        { name: 'Roquefort',  precioEntera: 18000, precioMedia: 9000 },
+        { name: 'Anchoas',    precioEntera: 18000, precioMedia: 9000 }
     ],
     beverages: [
-        // 1. Cervezas (Orden 1)
-        { name: 'Cerveza Santa Fe',                       price: 0, category: 'cervezas' },
-        { name: 'Cerveza Pilsen',                         price: 0, category: 'cervezas' },
-        { name: 'Cerveza Heineken',                       price: 0, category: 'cervezas' },
+        // 1. Cervezas
+        { name: 'Cerveza Santa Fe',                       price: 6000,  category: 'cervezas' },
+        { name: 'Cerveza Pilsen',                         price: 6500,  category: 'cervezas' },
+        { name: 'Cerveza Heineken',                       price: 8500,  category: 'cervezas' },
 
-        // 2. Gaseosas y Saborizadas (Orden 2)
-        { name: 'Coca/Sprite',                            price: 0, category: 'gaseosas' },
-        { name: 'Lata de coca/sprite',                    price: 0, category: 'gaseosas' },
+        // 2. Gaseosas y Saborizadas
+        { name: 'Coca-Cola',                              price: 6000,  category: 'gaseosas' },
+        { name: 'Coca-Cola Zero',                         price: 6000,  category: 'gaseosas' },
+        { name: 'Sprite',                                 price: 6000,  category: 'gaseosas' },
+        { name: 'Lata de Coca-Cola',                      price: 3000,  category: 'gaseosas' },
+        { name: 'Lata de Sprite',                         price: 3000,  category: 'gaseosas' },
 
-        // 3. Aguas y Sodas (Orden 3)
-        { name: 'Agua',                                   price: 0, category: 'aguas'    },
-        { name: 'Agua saborizada (manzana/pomelo/naranja)', price: 0, category: 'aguas'  },
-        { name: 'Soda',                                   price: 0, category: 'aguas'    },
+        // 3. Aguas y Sodas
+        { name: 'Agua',                                   price: 3500,  category: 'aguas'    },
+        { name: 'Agua saborizada de manzana',             price: 4000,  category: 'aguas'    },
+        { name: 'Agua saborizada de pomelo',              price: 4000,  category: 'aguas'    },
+        { name: 'Agua saborizada de naranja',             price: 4000,  category: 'aguas'    },
+        { name: 'Soda',                                   price: 4000,  category: 'aguas'    },
 
-        // 4. Tragos (Orden 4)
-        { name: 'Jarro de fernet/gancia',                 price: 0, category: 'tragos'   },
-        { name: 'Lata de coca/sprite+fernet',             price: 0, category: 'tragos'   },
-        { name: 'Medida de fernet',                       price: 0, category: 'tragos'   },
-        { name: 'Piña colada',                            price: 0, category: 'tragos'   },
-        { name: 'Gin Tonic',                              price: 0, category: 'tragos'   },
-        { name: 'Whisky/Ginebra',                         price: 0, category: 'tragos'   },
+        // 4. Tragos
+        { name: 'Jarro de fernet',                        price: 7000,  category: 'tragos'   },
+        { name: 'Jarro de gancia',                        price: 7000,  category: 'tragos'   },
+        { name: 'Lata de Coca-Cola + fernet',             price: 5000,  category: 'tragos'   },
+        { name: 'Lata de Sprite + fernet',                price: 5000,  category: 'tragos'   },
+        { name: 'Medida de fernet',                       price: 2500,  category: 'tragos'   },
+        { name: 'Piña colada',                            price: 3000,  category: 'tragos'   },
+        { name: 'Gin tonic',                              price: 6500,  category: 'tragos'   },
+        { name: 'Whisky/Ginebra',                         price: 3500,  category: 'tragos'   },
 
-        // 5. Vinos (Orden 5)
-        { name: 'Vino blanco Cosecha Tardía (dulce)',     price: 0, category: 'vinos'    },
-        { name: 'Vino blanco Alma Mora (dulce)',          price: 0, category: 'vinos'    },
-        { name: 'Vino blanco Portillo',                   price: 0, category: 'vinos'    },
-        { name: 'Vino blanco Latitud',                    price: 0, category: 'vinos'    },
-        { name: 'Vino blanco Valentin',                   price: 0, category: 'vinos'    },
-        { name: 'Vino tinto Valentin',                    price: 0, category: 'vinos'    },
-        { name: 'Vino tinto Cordero con Piel de Lobo',    price: 0, category: 'vinos'    },
-        { name: 'Vino tinto Alma Mora',                   price: 0, category: 'vinos'    },
-        { name: 'Vino tinto Latitud 33',                  price: 0, category: 'vinos'    },
-        { name: 'Vino tinto Salentein',                   price: 0, category: 'vinos'    },
-        { name: 'Vino tinto Rutini',                      price: 0, category: 'vinos'    },
+        // 5. Vinos
+        { name: 'Vino blanco Cosecha Tardía (dulce)',     price: 9000,  category: 'vinos'    },
+        { name: 'Vino blanco Alma Mora (dulce)',          price: 10500, category: 'vinos'    },
+        { name: 'Vino blanco Portillo',                   price: 7500,  category: 'vinos'    },
+        { name: 'Vino blanco Latitud',                    price: 10500, category: 'vinos'    },
+        { name: 'Vino blanco Valentin',                   price: 8000,  category: 'vinos'    },
+        { name: 'Vino tinto Valentin',                    price: 8000,  category: 'vinos'    },
+        { name: 'Vino tinto Cordero con Piel de Lobo',    price: 9000,  category: 'vinos'    },
+        { name: 'Vino tinto Alma Mora',                   price: 9500,  category: 'vinos'    },
+        { name: 'Vino tinto Latitud 33',                  price: 10500, category: 'vinos'    },
+        { name: 'Vino tinto Salentein',                   price: 18000, category: 'vinos'    },
+        { name: 'Vino tinto Rutini',                      price: 26000, category: 'vinos'    },
 
-        // 6. Otras Bebidas (Orden 6)
-        { name: 'Vermú',                                  price: 0, category: 'otras'    }
+        // 6. Otras Bebidas
+        { name: 'Vermú',                                  price: 3000,  category: 'otras'    }
     ]
 };
 
@@ -62,6 +69,17 @@ const DEFAULT_GENERIC_DATA = {
     address: '', phone: '', email: '', footer: '', alias: ''
 };
 
+function generateUUID() {
+    if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+        return crypto.randomUUID();
+    }
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+        const r = Math.random() * 16 | 0;
+        const v = c === 'x' ? r : (r & 0x3 | 0x8);
+        return v.toString(16);
+    });
+}
+
 // Fuente única de verdad de la aplicación
 const appState = {
     tables:         [],
@@ -69,8 +87,10 @@ const appState = {
     genericData:    Object.assign({}, DEFAULT_GENERIC_DATA),
     prices:         JSON.parse(JSON.stringify(DEFAULT_PRICES)),
     currentMode:    'miercoles',
+    currentMozo:    'Mozo 1',
     numeroCocina:   '',
-    nextTableNumber: 1
+    nextTableNumber: 1,
+    offlineQueue:   []
 };
 
 function getNewOrderObject() {
@@ -82,7 +102,7 @@ function getNewOrderObject() {
     };
 }
 
-// Persistencia: localStorage (rápido) + archivo en userData (sobrevive reinstalaciones)
+// Persistencia: localStorage + archivo local userData + Neon Cloud PostgreSQL DB
 async function saveState() {
     const snapshot = {
         tables:          appState.tables,
@@ -90,23 +110,33 @@ async function saveState() {
         prices:          appState.prices,
         nextTableNumber: appState.nextTableNumber,
         currentMode:     appState.currentMode,
+        currentMozo:     appState.currentMozo,
         numeroCocina:    appState.numeroCocina,
-        genericData:     appState.genericData
+        genericData:     appState.genericData,
+        offlineQueue:    appState.offlineQueue
     };
     const dataStr = JSON.stringify(snapshot);
     localStorage.setItem('restaurantState', dataStr);
-    await window.electronAPI.saveBackup(dataStr);
+
+    if (typeof window !== 'undefined' && window.electronAPI) {
+        if (typeof window.electronAPI.saveBackup === 'function') {
+            await window.electronAPI.saveBackup(dataStr).catch(err => console.error('Error al guardar backup local:', err));
+        }
+        if (typeof window.electronAPI.syncCloudState === 'function') {
+            window.electronAPI.syncCloudState(snapshot).catch(err => console.error('Error sincronizando con Neon DB:', err));
+        }
+    }
 }
 
 function resolveBeverageCategory(name, category) {
     if (category) {
         const c = String(category).toLowerCase().trim();
-        if (c === 'cerveza' || c === 'cervezas') return 'cervezas';
-        if (c === 'gaseosa' || c === 'gaseosas') return 'gaseosas';
-        if (c === 'agua' || c === 'aguas' || c === 'saborizada' || c === 'saborizadas') return 'aguas';
-        if (c === 'jarro' || c === 'jarros' || c === 'trago' || c === 'tragos') return 'tragos';
-        if (c === 'vino' || c === 'vinos') return 'vinos';
-        if (c === 'otra' || c === 'otras' || c === 'otro' || c === 'otros') return 'otras';
+        if (c.includes('cerveza')) return 'cervezas';
+        if (c.includes('gaseosa') || c.includes('saborizada')) return 'gaseosas';
+        if (c.includes('agua') || c.includes('soda')) return 'aguas';
+        if (c.includes('trago') || c.includes('jarro') || c.includes('medida')) return 'tragos';
+        if (c.includes('vino')) return 'vinos';
+        if (c.includes('otra') || c.includes('otro')) return 'otras';
     }
 
     const n = String(name || '').toLowerCase();
@@ -122,58 +152,129 @@ function resolveBeverageCategory(name, category) {
 
 async function loadState() {
     let raw = localStorage.getItem('restaurantState');
-    if (!raw) raw = await window.electronAPI.loadBackup();
-    if (!raw) return;
+    if (!raw && typeof window !== 'undefined' && window.electronAPI && typeof window.electronAPI.loadBackup === 'function') {
+        raw = await window.electronAPI.loadBackup();
+    }
 
-    try {
-        const saved = JSON.parse(raw);
+    if (raw) {
+        try {
+            const saved = JSON.parse(raw);
+            appState.tables          = saved.tables          || [];
+            appState.barOrders       = saved.barOrders       || [];
+            appState.nextTableNumber = saved.nextTableNumber || 1;
+            appState.currentMode     = saved.currentMode     || 'miercoles';
+            appState.currentMozo     = saved.currentMozo     || 'Mozo 1';
+            appState.numeroCocina    = saved.numeroCocina    || '';
+            appState.genericData     = saved.genericData     || Object.assign({}, DEFAULT_GENERIC_DATA);
+            appState.offlineQueue    = saved.offlineQueue    || [];
+            if (saved.prices) {
+                appState.prices.pizzaLibreH = saved.prices.pizzaLibreH || DEFAULT_PRICES.pizzaLibreH;
+                appState.prices.pizzaLibreM = saved.prices.pizzaLibreM || DEFAULT_PRICES.pizzaLibreM;
+                appState.prices.pizzaLibreG = saved.prices.pizzaLibreG || DEFAULT_PRICES.pizzaLibreG;
+                appState.prices.empanada = saved.prices.empanada || DEFAULT_PRICES.empanada;
+                appState.prices.precioPostre = saved.prices.precioPostre || DEFAULT_PRICES.precioPostre;
+                appState.prices.precioMenuMartes = saved.prices.precioMenuMartes || DEFAULT_PRICES.precioMenuMartes;
+                appState.prices.precioMenuMiercoles = saved.prices.precioMenuMiercoles || DEFAULT_PRICES.precioMenuMiercoles;
+                appState.prices.precioMenuViernes = saved.prices.precioMenuViernes || DEFAULT_PRICES.precioMenuViernes;
+                appState.prices.precioMenuDomingo = saved.prices.precioMenuDomingo || DEFAULT_PRICES.precioMenuDomingo;
+                if (Array.isArray(saved.prices.preciosPizzas) && saved.prices.preciosPizzas.length > 0) {
+                    appState.prices.preciosPizzas = saved.prices.preciosPizzas;
+                }
+                if (Array.isArray(saved.prices.beverages) && saved.prices.beverages.length > 0) {
+                    appState.prices.beverages = saved.prices.beverages;
+                }
+            }
+        } catch (e) {
+            console.error('Error parseando respaldo local:', e);
+        }
+    }
 
-        appState.tables          = saved.tables          || [];
-        appState.barOrders       = saved.barOrders       || [];
-        appState.nextTableNumber = saved.nextTableNumber || 1;
-        appState.currentMode     = saved.currentMode     || 'miercoles';
-        appState.numeroCocina    = saved.numeroCocina    || '';
-        appState.genericData     = saved.genericData     || Object.assign({}, DEFAULT_GENERIC_DATA);
-
-        // Merge de precios: los valores del archivo prevalecen, se preservan defaults para campos nuevos
-        appState.prices = Object.assign(JSON.parse(JSON.stringify(DEFAULT_PRICES)), saved.prices || {});
-        if (saved.prices && Array.isArray(saved.prices.beverages)) {
-            const savedPriceMap = new Map();
-            saved.prices.beverages.forEach(b => {
-                if (b && b.name) savedPriceMap.set(b.name.trim().toLowerCase(), Number(b.price) || 0);
+    // Neon DB es la fuente de verdad: si conecta, REEMPLAZA bebidas y pizzas
+    if (typeof window !== 'undefined' && window.electronAPI && typeof window.electronAPI.loadCloudData === 'function') {
+        try {
+            const cloudRes = await window.electronAPI.loadCloudData().catch(function(err) {
+                console.warn('Servicio de nube no disponible:', err);
+                return null;
             });
+            if (cloudRes && cloudRes.success) {
+                // Cargar estado operativo del snapshot (mesas, barra, modo)
+                if (cloudRes.snapshot) {
+                    const snap = cloudRes.snapshot;
+                    if (snap.tables && snap.tables.length > 0) appState.tables = snap.tables;
+                    if (snap.barOrders && snap.barOrders.length > 0) appState.barOrders = snap.barOrders;
+                    if (snap.nextTableNumber) appState.nextTableNumber = snap.nextTableNumber;
+                    if (snap.currentMode) appState.currentMode = snap.currentMode;
+                    if (snap.numeroCocina) appState.numeroCocina = snap.numeroCocina;
+                    if (snap.genericData) appState.genericData = Object.assign({}, DEFAULT_GENERIC_DATA, snap.genericData);
+                }
 
-            // Usar catálogo oficial y aplicar precios guardados si ya existían
-            const mergedBeverages = DEFAULT_PRICES.beverages.map(bev => {
-                const key = bev.name.trim().toLowerCase();
-                const price = savedPriceMap.has(key) ? savedPriceMap.get(key) : bev.price;
-                savedPriceMap.delete(key);
-                return {
-                    name: bev.name,
-                    price: price,
-                    category: bev.category
-                };
-            });
+                // Construir bebidas y pizzas SOLO desde la tabla productos de Neon DB
+                if (cloudRes.dbProducts && Array.isArray(cloudRes.dbProducts) && cloudRes.dbProducts.length > 0) {
+                    var dbBeverages = [];
+                    var dbPizzas = [];
 
-            // Si había bebidas adicionales personalizadas creadas por el usuario, mantenerlas
-            saved.prices.beverages.forEach(bev => {
-                if (bev && bev.name) {
-                    const key = bev.name.trim().toLowerCase();
-                    if (savedPriceMap.has(key)) {
-                        mergedBeverages.push({
-                            name: bev.name,
-                            price: Number(bev.price) || 0,
-                            category: resolveBeverageCategory(bev.name, bev.category)
-                        });
+                    cloudRes.dbProducts.forEach(function(prod) {
+                        var numPrice = Number(prod.precio) || 0;
+                        var n = prod.nombre ? prod.nombre.trim() : '';
+                        var cat = prod.categoria ? prod.categoria.trim().toLowerCase() : '';
+
+                        if (cat === 'comida') {
+                            if (n.toLowerCase().includes('menu') || n.toLowerCase().includes('menú')) {
+                                if (numPrice > 0) {
+                                    appState.prices.precioMenuMiercoles = numPrice;
+                                    appState.prices.precioMenuMartes = numPrice;
+                                    appState.prices.precioMenuViernes = numPrice;
+                                    appState.prices.precioMenuDomingo = numPrice;
+                                }
+                            } else if (n.toLowerCase() === 'postre') {
+                                if (numPrice > 0) appState.prices.precioPostre = numPrice;
+                            } else if (n.toLowerCase().includes('empanada')) {
+                                if (numPrice > 0) appState.prices.empanada = numPrice;
+                            } else if (n.toLowerCase().includes('pizza libre hombres')) {
+                                if (numPrice > 0) appState.prices.pizzaLibreH = numPrice;
+                            } else if (n.toLowerCase().includes('pizza libre mujeres')) {
+                                if (numPrice > 0) appState.prices.pizzaLibreM = numPrice;
+                            } else if (n.toLowerCase().includes('pizza libre general')) {
+                                if (numPrice > 0) appState.prices.pizzaLibreG = numPrice;
+                            }
+                        } else if (cat === 'pizzas') {
+                            var cleanName = n.replace(/^pizza\s+/i, '').trim();
+                            if (numPrice > 0) {
+                                dbPizzas.push({
+                                    name: cleanName,
+                                    precioEntera: numPrice,
+                                    precioMedia: Math.round(numPrice / 2)
+                                });
+                            }
+                        } else {
+                            // Es una bebida
+                            dbBeverages.push({
+                                name: n,
+                                price: numPrice,
+                                category: resolveBeverageCategory(n, prod.categoria)
+                            });
+                        }
+                    });
+
+                    // REEMPLAZAR la lista local con lo que viene de la BDD
+                    if (dbBeverages.length > 0) {
+                        appState.prices.beverages = dbBeverages;
+                    }
+                    if (dbPizzas.length > 0) {
+                        appState.prices.preciosPizzas = dbPizzas;
                     }
                 }
-            });
-
-            appState.prices.beverages = mergedBeverages;
+            }
+        } catch (err) {
+            console.error('Error sincronizando con Neon DB en la nube:', err);
         }
-        if (saved.prices && saved.prices.preciosPizzas) appState.prices.preciosPizzas = saved.prices.preciosPizzas;
-    } catch (e) {
-        console.error('Error al parsear el estado guardado:', e);
     }
-}
 
+    // Garantizar precios validos
+    if (!appState.prices.precioMenuMartes) appState.prices.precioMenuMartes = DEFAULT_PRICES.precioMenuMartes;
+    if (!appState.prices.precioMenuMiercoles) appState.prices.precioMenuMiercoles = DEFAULT_PRICES.precioMenuMiercoles;
+    if (!appState.prices.precioMenuViernes) appState.prices.precioMenuViernes = DEFAULT_PRICES.precioMenuViernes;
+    if (!appState.prices.precioMenuDomingo) appState.prices.precioMenuDomingo = DEFAULT_PRICES.precioMenuDomingo;
+    if (!appState.prices.precioPostre) appState.prices.precioPostre = DEFAULT_PRICES.precioPostre;
+    if (!appState.prices.empanada) appState.prices.empanada = DEFAULT_PRICES.empanada;
+}

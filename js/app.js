@@ -152,23 +152,159 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Categorías de bebidas organizadas en el orden oficial del restaurante
     const BEVERAGE_CATEGORIES = [
-        { id: 'cervezas', label: 'Cervezas',               icon: '🍺' },
-        { id: 'gaseosas', label: 'Gaseosas y Saborizadas', icon: '🥤' },
-        { id: 'aguas',    label: 'Aguas y Sodas',          icon: '💧' },
-        { id: 'tragos',   label: 'Tragos',                 icon: '🍹' },
-        { id: 'vinos',    label: 'Vinos',                  icon: '🍷' },
-        { id: 'otras',    label: 'Otras Bebidas',          icon: '🍸' }
+        { id: 'cervezas', label: 'Cervezas',               icon: '' },
+        { id: 'gaseosas', label: 'Gaseosas y Saborizadas', icon: '' },
+        { id: 'aguas',    label: 'Aguas y Sodas',          icon: '' },
+        { id: 'tragos',   label: 'Tragos',                 icon: '' },
+        { id: 'vinos',    label: 'Vinos',                  icon: '' },
+        { id: 'otras',    label: 'Otras Bebidas',          icon: '' }
     ];
 
+    // Mozo y Reglas Nuevas DOM
+    const mozoSwitcher            = document.getElementById('mozo-switcher');
+    const mozoLockBanner          = document.getElementById('mozo-lock-banner');
+    const mozoLockMessage         = document.getElementById('mozo-lock-message');
+    const duplicateWarningModal   = document.getElementById('duplicate-warning-modal');
+    const duplicateWarningMessage = document.getElementById('duplicate-warning-message');
+    const duplicateCancelBtn      = document.getElementById('duplicate-cancel-btn');
+    const duplicateConfirmBtn     = document.getElementById('duplicate-confirm-btn');
+
     // ── UI STATE (no se persiste) ─────────────────────────────────────────────
-    let activeEntity       = null;
-    let orderBeforeChanges = null;
-    let actionToConfirm    = null;
-    let currentSalesReport = null;
-    let pendingNewMode     = null;
-    let modeBeforeChange   = null;
+    let activeEntity           = null;
+    let orderBeforeChanges     = null;
+    let actionToConfirm        = null;
+    let currentSalesReport     = null;
+    let pendingNewMode         = null;
+    let modeBeforeChange       = null;
+    let pendingDuplicateAction = null;
 
     // ── HELPERS ───────────────────────────────────────────────────────────────
+    function showSystemAlert(message, title = 'Aviso del Sistema') {
+        const modal = document.getElementById('custom-system-alert-modal');
+        const titleEl = document.getElementById('custom-alert-title');
+        const messageEl = document.getElementById('custom-alert-message');
+        const okBtn = document.getElementById('custom-alert-ok-btn');
+        const closeX = document.getElementById('close-custom-alert-x-btn');
+
+        if (!modal) {
+            console.log(message);
+            return;
+        }
+
+        if (titleEl) titleEl.textContent = title;
+        if (messageEl) messageEl.textContent = message;
+
+        modal.style.display = 'flex';
+
+        const closeHandler = () => {
+            modal.style.display = 'none';
+            okBtn.removeEventListener('click', closeHandler);
+            if (closeX) closeX.removeEventListener('click', closeHandler);
+        };
+
+        okBtn.onclick = closeHandler;
+        if (closeX) closeX.onclick = closeHandler;
+    }
+    window.showSystemAlert = showSystemAlert;
+
+    // REGLA 1: Idempotencia Offline con UUID único
+    function recordOfflineAction(tableIdOrNum, productName, quantity) {
+        const action = {
+            id_accion_offline: generateUUID(),
+            id_mesa: typeof tableIdOrNum === 'number' ? tableIdOrNum : (parseInt(tableIdOrNum) || 0),
+            nombre_producto: productName,
+            cantidad: quantity,
+            creado_en: new Date().toISOString()
+        };
+        if (!appState.offlineQueue) appState.offlineQueue = [];
+        appState.offlineQueue.push(action);
+        saveState();
+        return action;
+    }
+
+    async function syncOfflineQueue() {
+        if (!navigator.onLine || !appState.offlineQueue || appState.offlineQueue.length === 0) return;
+        const pending = [...appState.offlineQueue];
+        for (const action of pending) {
+            // Se envía con id_accion_offline UUID único para prevenir duplicación en servidor/BDD
+            appState.offlineQueue = appState.offlineQueue.filter(a => a.id_accion_offline !== action.id_accion_offline);
+        }
+        saveState();
+    }
+    window.addEventListener('online', syncOfflineQueue);
+
+    // REGLA 2: Bloqueo Dinámico de Concurrencia (En uso mientras está abierta)
+    function isTableInUseByOther(table) {
+        const target = table || activeEntity;
+        if (!target || !target.id || !target.id.startsWith('table-')) return false;
+        if (!target.inUseBy) return false;
+        if (target.inUseBy === appState.currentMozo) return false;
+        // Timeout de seguridad de 5 minutos (300.000 ms) en caso de desconexión sin cerrar modal
+        const elapsed = Date.now() - (target.inUseStart || 0);
+        return elapsed < 300000;
+    }
+
+    function updateModalLockState() {
+        if (!activeEntity || !activeEntity.id.startsWith('table-')) {
+            if (mozoLockBanner) mozoLockBanner.classList.add('hidden');
+            setModalInputsDisabled(false);
+            return;
+        }
+
+        const locked = isTableInUseByOther(activeEntity);
+        if (locked) {
+            if (mozoLockBanner) mozoLockBanner.classList.remove('hidden');
+            if (mozoLockMessage) {
+                mozoLockMessage.textContent = `Mesa en uso: "${activeEntity.inUseBy}" la está editando en este instante.`;
+            }
+            setModalInputsDisabled(true);
+        } else {
+            if (mozoLockBanner) mozoLockBanner.classList.add('hidden');
+            setModalInputsDisabled(false);
+        }
+    }
+
+    function setModalInputsDisabled(disabled) {
+        const btns = orderModal.querySelectorAll('.op-btn, #add-beverage-btn, #add-custom-pizza-btn, .decrease-bev-btn, .increase-bev-btn, .remove-pizza-btn, #delete-entity-btn, #clean-order-btn');
+        btns.forEach(b => {
+            b.disabled = disabled;
+            if (disabled) b.classList.add('opacity-40', 'cursor-not-allowed', 'pointer-events-none');
+            else b.classList.remove('opacity-40', 'cursor-not-allowed', 'pointer-events-none');
+        });
+        const numInput = document.getElementById('modal-table-number-input');
+        if (numInput) numInput.disabled = disabled;
+    }
+
+    // REGLA 3: Alerta Naranja de Duplicado Cercano (< 60 Segundos)
+    function checkDuplicateAndAdd(productName, onConfirm) {
+        if (!activeEntity) { onConfirm(); return; }
+
+        if (!activeEntity.recentAdditions) activeEntity.recentAdditions = [];
+        const now = Date.now();
+        // Filtrar productos agregados hace más de 60 segundos
+        activeEntity.recentAdditions = activeEntity.recentAdditions.filter(item => (now - item.timestamp) < 60000);
+
+        const exists = activeEntity.recentAdditions.find(item => item.productName === productName);
+
+        if (exists) {
+            const tableLabel = activeEntity.id.startsWith('table-') ? `la Mesa ${activeEntity.number}` : `el pedido de ${activeEntity.clientName}`;
+            if (duplicateWarningMessage) {
+                duplicateWarningMessage.innerHTML = `El producto <strong>"${escapeHtml(productName)}"</strong> fue agregado a ${escapeHtml(tableLabel)} hace menos de 60 segundos.`;
+            }
+            pendingDuplicateAction = () => {
+                activeEntity.recentAdditions.push({ productName, timestamp: Date.now() });
+                recordOfflineAction(activeEntity.number || activeEntity.id, productName, 1);
+                onConfirm();
+            };
+            if (duplicateWarningModal) duplicateWarningModal.style.display = 'flex';
+        } else {
+            activeEntity.recentAdditions.push({ productName, timestamp: Date.now() });
+            recordOfflineAction(activeEntity.number || activeEntity.id, productName, 1);
+            onConfirm();
+        }
+    }
+
+
     function escapeHtml(str) {
         if (str === null || str === undefined) return '';
         return String(str)
@@ -185,12 +321,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     function resolveBeverageCategory(name, category) {
         if (category) {
             const c = String(category).toLowerCase().trim();
-            if (c === 'cerveza' || c === 'cervezas') return 'cervezas';
-            if (c === 'gaseosa' || c === 'gaseosas') return 'gaseosas';
-            if (c === 'agua' || c === 'aguas' || c === 'saborizada' || c === 'saborizadas') return 'aguas';
-            if (c === 'jarro' || c === 'jarros' || c === 'trago' || c === 'tragos') return 'tragos';
-            if (c === 'vino' || c === 'vinos') return 'vinos';
-            if (c === 'otra' || c === 'otras' || c === 'otro' || c === 'otros') return 'otras';
+            if (c.includes('cerveza')) return 'cervezas';
+            if (c.includes('gaseosa') || c.includes('saborizada')) return 'gaseosas';
+            if (c.includes('agua') || c.includes('soda')) return 'aguas';
+            if (c.includes('trago') || c.includes('jarro') || c.includes('medida')) return 'tragos';
+            if (c.includes('vino')) return 'vinos';
+            if (c.includes('otra') || c.includes('otro')) return 'otras';
         }
 
         const n = String(name || '').toLowerCase();
@@ -299,7 +435,10 @@ document.addEventListener('DOMContentLoaded', async () => {
             const total = calculateTotal(table.order, appState.prices, appState.currentMode);
             const tip = table.tipAmount || 0;
 
-            const bgClass = isPaid ? 'bg-emerald-600 border-emerald-800' : 'bg-blue-500 border-blue-700';
+            const isEditing = isTableInUseByOther(table);
+            const bgClass   = isPaid
+                ? 'bg-emerald-600 border-emerald-800'
+                : (isEditing ? 'bg-amber-700 border-amber-400 shadow-amber-500/30' : 'bg-blue-500 border-blue-700');
 
             el.className = `mesa absolute ${bgClass} border-2 rounded-lg flex flex-col items-center justify-center text-white font-bold cursor-grab select-none p-1 shadow-md transition-colors duration-200 overflow-hidden`;
             el.style.left   = `${table.x}px`;
@@ -343,10 +482,22 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
             } else if (persons > 0 && appState.currentMode !== 'jueves' && appState.currentMode !== 'sabado') {
                 const badgeTextSize = (w < 70 || h < 70) ? 'text-[9px] px-1 py-0.2' : (w < 95 || h < 90) ? 'text-[10px] px-1.5 py-0.5' : 'text-xs px-1.5 py-0.5';
-                infoSubHtml = `<span class="${badgeTextSize} bg-blue-900 bg-opacity-70 rounded-full mt-0.5 flex items-center justify-center gap-0.5 font-semibold leading-none">👥 ${persons}</span>`;
+                infoSubHtml = `<span class="${badgeTextSize} bg-blue-900 bg-opacity-70 rounded-full mt-0.5 flex items-center justify-center gap-0.5 font-semibold leading-none">${persons} pers.</span>`;
             }
 
-            numEl.innerHTML = `<span class="leading-none ${fontClass} font-bold truncate max-w-full">${escapeHtml(table.number)}</span>${infoSubHtml}`;
+            let mozoBadge = '';
+            if (isEditing) {
+                mozoBadge = `<div class="text-[9px] bg-amber-900 text-amber-100 border border-amber-400 px-1 py-0.2 rounded mt-0.5 font-bold animate-pulse truncate max-w-full" title="Abierta por ${escapeHtml(table.inUseBy)}">
+                    ${escapeHtml(table.inUseBy)} (Editando)
+                </div>`;
+            } else if (table.mozo_asignado) {
+                mozoBadge = `<div class="text-[9px] bg-slate-900 bg-opacity-60 text-slate-200 px-1 py-0.2 rounded mt-0.5 font-medium truncate max-w-full" title="Atendida por: ${escapeHtml(table.mozo_asignado)}">
+                    ${escapeHtml(table.mozo_asignado)}
+                </div>`;
+            }
+
+            numEl.innerHTML = `<span class="leading-none ${fontClass} font-bold truncate max-w-full">${escapeHtml(table.number)}</span>${infoSubHtml}${mozoBadge}`;
+
 
             const resizerEl = document.createElement('div');
             resizerEl.className = 'resizer';
@@ -441,7 +592,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             if (catBevs.length > 0) {
                 const groupEl = document.createElement('optgroup');
-                groupEl.label = `${cat.icon} ${cat.label}`;
+                groupEl.label = cat.label;
                 catBevs.forEach(bev => {
                     const opt = document.createElement('option');
                     opt.value = bev.name;
@@ -476,7 +627,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             const isPaid = activeEntity.isPaid || false;
             const tip = activeEntity.tipAmount || 0;
 
-            if (payBtnIcon) payBtnIcon.textContent = isPaid ? '✅' : '💳';
+            if (payBtnIcon) payBtnIcon.textContent = '';
             if (payBtnText) payBtnText.textContent = isPaid ? 'Pagado' : 'Marcar Pagado';
 
             if (cleanOrderBtn) {
@@ -510,7 +661,17 @@ document.addEventListener('DOMContentLoaded', async () => {
     // ── MODALES ───────────────────────────────────────────────────────────────
     function openOrderModal(id, type) {
         if (type === 'table') {
-            activeEntity = appState.tables.find(t => t.id === id);
+            const target = appState.tables.find(t => t.id === id);
+            if (target && isTableInUseByOther(target)) {
+                showSystemAlert(`Mesa en uso: "${target.inUseBy}" está editando la Mesa ${target.number} en este instante. Por favor intenta en unos segundos.`, 'Mesa en Uso');
+                return;
+            }
+            activeEntity = target;
+            if (activeEntity) {
+                activeEntity.inUseBy = appState.currentMozo;
+                activeEntity.inUseStart = Date.now();
+                activeEntity.mozo_asignado = appState.currentMozo;
+            }
             modalTitleContainer.innerHTML = `<div class="flex items-center gap-2"><span class="text-2xl font-bold text-gray-800">Mesa</span><input id="modal-table-number-input" type="text" value="${activeEntity.number}" class="text-2xl font-bold p-1 w-20 border rounded-lg text-center"></div>`;
             deleteEntityBtn.textContent = 'Eliminar Mesa';
         } else {
@@ -524,6 +685,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         orderBeforeChanges = JSON.parse(JSON.stringify(activeEntity.order));
         resetDeleteButtonState();
         updateOrderModalUI();
+        updateModalLockState();
         orderModal.style.display = 'flex';
     }
 
@@ -534,6 +696,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const newNum = numInput.value.trim();
                 if (newNum) activeEntity.number = newNum;
             }
+            // Liberar bloqueo de edición activa
+            activeEntity.inUseBy = null;
+            activeEntity.inUseStart = null;
         }
         if (activeEntity && orderBeforeChanges) {
             const name    = activeEntity.id.startsWith('table-') ? `Mesa ${activeEntity.number}` : activeEntity.clientName;
@@ -547,6 +712,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         beverageQuantityInput.value = 1;
         renderAll();
     }
+
 
     function openPasswordModal(action) {
         actionToConfirm = action;
@@ -612,7 +778,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                 header.className = 'bg-gray-100 px-3 py-2 border-b flex items-center justify-between';
                 header.innerHTML = `
                     <div class="flex items-center space-x-1.5 font-bold text-sm text-gray-800">
-                        <span>${cat.icon}</span>
                         <span>${cat.label}</span>
                     </div>
                     <span class="text-xs bg-gray-300 text-gray-700 px-2 py-0.5 rounded-full font-bold">${matchingItems.length}</span>
@@ -881,26 +1046,14 @@ document.addEventListener('DOMContentLoaded', async () => {
         const newMode = e.target.value;
         if (newMode === appState.currentMode) return;
 
-        // Solo solicitar confirmación de limpieza si hay pedidos cargados en las mesas o barra
-        if (hasActiveOrders()) {
-            pendingNewMode = newMode;
-            modeBeforeChange = appState.currentMode;
-
-            if (changeDayTargetName) {
-                changeDayTargetName.textContent = DAY_NAMES[newMode] || capitalizeFirstLetter(newMode);
-            }
-            if (changeDayModal) {
-                changeDayModal.style.display = 'flex';
-            }
-        } else {
-            // Si no hay pedidos cargados, cambiar el día directamente
-            appState.currentMode = newMode;
-            updateUIMode(appState.currentMode);
-            saveState();
-            renderAll();
-            showModeToast(appState.currentMode);
-        }
+        // Cambiar de día ajusta los precios/menúes activos pero conserva los datos hasta el Cierre de Caja
+        appState.currentMode = newMode;
+        updateUIMode(appState.currentMode);
+        saveState();
+        renderAll();
+        showModeToast(appState.currentMode, `Vista/Precios cambiados a: ${DAY_NAMES[newMode] || newMode}`);
     });
+
 
     if (changeDayClearBtn) {
         changeDayClearBtn.addEventListener('click', () => {
@@ -984,6 +1137,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const newTable = {
             id: `table-${Date.now()}`,
             number: appState.nextTableNumber.toString(),
+            mozo_asignado: appState.currentMozo || 'Mozo 1',
             x: 50, y: 50, width: 100, height: 100,
             order: getNewOrderObject()
         };
@@ -1015,13 +1169,27 @@ document.addEventListener('DOMContentLoaded', async () => {
             const type   = target.dataset.type;
             const action = target.dataset.action;
             if (action === 'increase') {
-                if (!activeEntity.order[type]) activeEntity.order[type] = 0;
-                activeEntity.order[type]++;
+                const names = {
+                    pizzaLibreH: 'Pizza Libre Hombres',
+                    pizzaLibreM: 'Pizza Libre Mujeres',
+                    pizzaLibreG: 'Pizza Libre General',
+                    menu: 'Menú',
+                    empanadas: 'Empanada',
+                    menores: 'Menor',
+                    postres: 'Postre'
+                };
+                const productName = names[type] || type;
+                checkDuplicateAndAdd(productName, () => {
+                    if (!activeEntity.order[type]) activeEntity.order[type] = 0;
+                    activeEntity.order[type]++;
+                    updateOrderModalUI();
+                    saveState();
+                });
             } else if (action === 'decrease' && activeEntity.order[type] > 0) {
                 activeEntity.order[type]--;
+                updateOrderModalUI();
+                saveState();
             }
-            updateOrderModalUI();
-            saveState();
         }
 
         if (target.classList.contains('decrease-bev-btn')) {
@@ -1031,13 +1199,20 @@ document.addEventListener('DOMContentLoaded', async () => {
                 bev.quantity--;
                 if (bev.quantity === 0) activeEntity.order.beverages.splice(idx, 1);
                 updateOrderModalUI();
+                saveState();
             }
         }
 
         if (target.classList.contains('increase-bev-btn')) {
             const idx = parseInt(target.dataset.index);
             const bev = activeEntity.order.beverages[idx];
-            if (bev) { bev.quantity++; updateOrderModalUI(); }
+            if (bev) {
+                checkDuplicateAndAdd(bev.name, () => {
+                    bev.quantity++;
+                    updateOrderModalUI();
+                    saveState();
+                });
+            }
         }
 
         if (target.classList.contains('remove-pizza-btn')) {
@@ -1045,6 +1220,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (activeEntity.order.pizzasPersonalizadas[idx]) {
                 activeEntity.order.pizzasPersonalizadas.splice(idx, 1);
                 updateOrderModalUI();
+                saveState();
             }
         }
     });
@@ -1059,19 +1235,30 @@ document.addEventListener('DOMContentLoaded', async () => {
             ? [topping1, topping2].filter(t => t !== 'ninguno')
             : [topping1, topping2, topping3].filter(t => t !== 'ninguno');
 
-        activeEntity.order.pizzasPersonalizadas.push({ id: Date.now(), size, toppings });
-        updateOrderModalUI();
+        const pizzaName = `Pizza ${size} (${toppings.join(', ')})`;
+
+        checkDuplicateAndAdd(pizzaName, () => {
+            activeEntity.order.pizzasPersonalizadas.push({
+                id: Date.now(), size, toppings, id_accion_offline: generateUUID()
+            });
+            updateOrderModalUI();
+            saveState();
+        });
     });
 
     addBeverageBtn.addEventListener('click', () => {
         const name     = beverageSelect.value;
         const quantity = parseInt(beverageQuantityInput.value);
         if (!name || quantity <= 0) return;
-        const existing = activeEntity.order.beverages.find(b => b.name === name);
-        if (existing) { existing.quantity += quantity; }
-        else          { activeEntity.order.beverages.push({ name, quantity }); }
-        beverageQuantityInput.value = 1;
-        updateOrderModalUI();
+
+        checkDuplicateAndAdd(name, () => {
+            const existing = activeEntity.order.beverages.find(b => b.name === name);
+            if (existing) { existing.quantity += quantity; }
+            else          { activeEntity.order.beverages.push({ name, quantity }); }
+            beverageQuantityInput.value = 1;
+            updateOrderModalUI();
+            saveState();
+        });
     });
 
     if (menorPriceInput) {
@@ -1187,6 +1374,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     clearAllOrdersBtn.addEventListener('click', () => {
+        if (appState.currentMozo !== 'Mozo 1') {
+            showSystemAlert('Permiso Denegado: Solo el "Mozo 1" (Encargado) tiene permisos para realizar el Cierre de Caja General.', 'Permiso Denegado');
+            return;
+        }
         openPasswordModal('clearAllOrders');
     });
 
@@ -1208,25 +1399,94 @@ document.addEventListener('DOMContentLoaded', async () => {
             updateOrderModalUI();
             closePasswordModal();
         } else if (actionToConfirm === 'clearAllOrders') {
+            // Generar Reporte de Cierre de Caja antes de limpiar
+            currentSalesReport = generateSalesReport(
+                appState.tables,
+                appState.barOrders,
+                appState.prices,
+                appState.currentMode,
+                appState.genericData
+            );
+            
+            // Limpiar mesas y barra, liberar mozos asignados
             appState.tables.forEach(t => {
                 t.order = getNewOrderObject();
                 t.isPaid = false;
                 t.paidAmount = 0;
                 t.tipAmount = 0;
+                t.mozo_asignado = null;
+                t.inUseBy = null;
             });
             appState.barOrders = [];
-            saveState(); renderAll(); closePasswordModal();
+
+            // Notificar Cierre de Caja a la BDD Neon
+            if (window.electronAPI && window.electronAPI.closeGlobalShift) {
+                window.electronAPI.closeGlobalShift();
+            }
+
+            saveState();
+            renderAll();
+            closePasswordModal();
+
+            // Abrir automáticamente el modal con el reporte final de caja generada
+            if (salesReportContent && salesReportModal) {
+                salesReportContent.innerHTML = SalesReportManager.renderModalDashboard(currentSalesReport);
+                salesReportModal.style.display = 'flex';
+            }
+            showModeToast(appState.currentMode, '¡Cierre de Caja General realizado por Mozo 1 exitosamente!');
         }
     });
 
+
+    function syncPricesFromDOM() {
+        if (pricePizzaLibreHInput && !isNaN(parseFloat(pricePizzaLibreHInput.value)) && parseFloat(pricePizzaLibreHInput.value) > 0)
+            appState.prices.pizzaLibreH = parseFloat(pricePizzaLibreHInput.value);
+        if (pricePizzaLibreMInput && !isNaN(parseFloat(pricePizzaLibreMInput.value)) && parseFloat(pricePizzaLibreMInput.value) > 0)
+            appState.prices.pizzaLibreM = parseFloat(pricePizzaLibreMInput.value);
+        if (pricePizzaLibreGInput && !isNaN(parseFloat(pricePizzaLibreGInput.value)) && parseFloat(pricePizzaLibreGInput.value) > 0)
+            appState.prices.pizzaLibreG = parseFloat(pricePizzaLibreGInput.value);
+
+        if (priceEmpanadaInput && !isNaN(parseFloat(priceEmpanadaInput.value)) && parseFloat(priceEmpanadaInput.value) > 0)
+            appState.prices.empanada = parseFloat(priceEmpanadaInput.value);
+        if (pricePostreInput && !isNaN(parseFloat(pricePostreInput.value)) && parseFloat(pricePostreInput.value) > 0)
+            appState.prices.precioPostre = parseFloat(pricePostreInput.value);
+
+        if (priceMenuMartesInput && !isNaN(parseFloat(priceMenuMartesInput.value)) && parseFloat(priceMenuMartesInput.value) > 0)
+            appState.prices.precioMenuMartes = parseFloat(priceMenuMartesInput.value);
+        if (priceMenuMiercolesInput && !isNaN(parseFloat(priceMenuMiercolesInput.value)) && parseFloat(priceMenuMiercolesInput.value) > 0)
+            appState.prices.precioMenuMiercoles = parseFloat(priceMenuMiercolesInput.value);
+        if (priceMenuViernesInput && !isNaN(parseFloat(priceMenuViernesInput.value)) && parseFloat(priceMenuViernesInput.value) > 0)
+            appState.prices.precioMenuViernes = parseFloat(priceMenuViernesInput.value);
+        if (priceMenuDomingoInput && !isNaN(parseFloat(priceMenuDomingoInput.value)) && parseFloat(priceMenuDomingoInput.value) > 0)
+            appState.prices.precioMenuDomingo = parseFloat(priceMenuDomingoInput.value);
+
+        document.querySelectorAll('#beverages-prices-list .bev-price-input').forEach(input => {
+            const idx = parseInt(input.dataset.index);
+            const val = parseFloat(input.value);
+            if (!isNaN(val) && val >= 0 && appState.prices.beverages[idx]) {
+                appState.prices.beverages[idx].price = val;
+            }
+        });
+
+        document.querySelectorAll('#custom-pizza-prices-list .pizza-price-input').forEach(input => {
+            const idx  = parseInt(input.dataset.pizzaIndex);
+            const type = input.dataset.priceType;
+            const val  = parseFloat(input.value);
+            if (!isNaN(val) && val >= 0 && appState.prices.preciosPizzas[idx]) {
+                if (type === 'entera') appState.prices.preciosPizzas[idx].precioEntera = val;
+                if (type === 'media')  appState.prices.preciosPizzas[idx].precioMedia  = val;
+            }
+        });
+    }
+
     addNewBeveragePriceBtn.addEventListener('click', () => {
+        syncPricesFromDOM();
         const name     = newBeverageNameInput.value.trim();
         const price    = parseFloat(newBeveragePriceInput.value);
         const category = newBeverageCategoryInput.value || 'otro';
         if (name && !isNaN(price)) {
             const newBev = { name, price, category };
 
-            // Encontrar el último índice de la misma categoría para insertarlo junto a sus pares
             let insertIdx = -1;
             for (let i = appState.prices.beverages.length - 1; i >= 0; i--) {
                 const b = appState.prices.beverages[i];
@@ -1245,70 +1505,89 @@ document.addEventListener('DOMContentLoaded', async () => {
             newBeverageNameInput.value  = '';
             newBeveragePriceInput.value = '';
             renderBeveragePrices();
+            saveState();
+
+            if (window.electronAPI && typeof window.electronAPI.updateProductPrice === 'function') {
+                window.electronAPI.updateProductPrice({ productName: name, newPrice: price, category });
+            }
         }
     });
 
-    beveragesPricesList.addEventListener('click', e => {
+    beveragesPricesList.addEventListener('click', async e => {
         const btn = e.target.closest('.delete-bev-price-btn');
         if (btn) {
+            syncPricesFromDOM();
             const idx = parseInt(btn.dataset.index);
             if (!isNaN(idx) && appState.prices.beverages[idx]) {
-                appState.prices.beverages.splice(idx, 1);
+                const removedBev = appState.prices.beverages.splice(idx, 1)[0];
                 renderBeveragePrices();
+
+                if (removedBev && removedBev.name && window.electronAPI && typeof window.electronAPI.deleteProduct === 'function') {
+                    await window.electronAPI.deleteProduct({ productName: removedBev.name }).catch(err => console.error(err));
+                }
+                saveState();
             }
         }
     });
 
     addNewPizzaBtn.addEventListener('click', () => {
+        syncPricesFromDOM();
         const name = newPizzaNameInput.value.trim();
         if (name) {
             appState.prices.preciosPizzas.push({ name: name, precioEntera: 0, precioMedia: 0 });
             newPizzaNameInput.value = '';
             renderCustomPizzaPrices();
+            saveState();
+
+            if (window.electronAPI && typeof window.electronAPI.updateProductPrice === 'function') {
+                window.electronAPI.updateProductPrice({ productName: `Pizza ${name}`, newPrice: 0, category: 'Pizzas' });
+            }
         }
     });
 
-    customPizzaPricesList.addEventListener('click', e => {
+    customPizzaPricesList.addEventListener('click', async e => {
         const btn = e.target.closest('.delete-pizza-price-btn');
         if (btn) {
+            syncPricesFromDOM();
             const idx = parseInt(btn.dataset.index);
             if (!isNaN(idx) && appState.prices.preciosPizzas[idx]) {
-                appState.prices.preciosPizzas.splice(idx, 1);
+                const removedPizza = appState.prices.preciosPizzas.splice(idx, 1)[0];
                 renderCustomPizzaPrices();
+
+                if (removedPizza && removedPizza.name && window.electronAPI && typeof window.electronAPI.deleteProduct === 'function') {
+                    await window.electronAPI.deleteProduct({ productName: removedPizza.name }).catch(err => console.error(err));
+                }
+                saveState();
             }
         }
     });
 
     savePricesBtn.addEventListener('click', () => {
-        appState.prices.pizzaLibreH          = parseFloat(pricePizzaLibreHInput.value)   || 0;
-        appState.prices.pizzaLibreM          = parseFloat(pricePizzaLibreMInput.value)   || 0;
-        appState.prices.pizzaLibreG          = parseFloat(pricePizzaLibreGInput.value)   || 0;
-        appState.prices.empanada             = parseFloat(priceEmpanadaInput.value)      || 0;
-        appState.prices.precioPostre         = parseFloat(pricePostreInput.value)        || 0;
-        appState.prices.precioMenuMartes     = parseFloat(priceMenuMartesInput.value)    || 0;
-        appState.prices.precioMenuMiercoles  = parseFloat(priceMenuMiercolesInput.value) || 0;
-        appState.prices.precioMenuViernes    = parseFloat(priceMenuViernesInput.value)   || 0;
-        appState.prices.precioMenuDomingo    = parseFloat(priceMenuDomingoInput.value)   || 0;
+        syncPricesFromDOM();
 
-        document.querySelectorAll('#beverages-prices-list .bev-price-input').forEach(input => {
-            const idx      = parseInt(input.dataset.index);
-            const newPrice = parseFloat(input.value);
-            if (!isNaN(newPrice) && appState.prices.beverages[idx]) appState.prices.beverages[idx].price = newPrice;
-        });
-
-        document.querySelectorAll('#custom-pizza-prices-list .pizza-price-input').forEach(input => {
-            const idx      = parseInt(input.dataset.pizzaIndex);
-            const type     = input.dataset.priceType;
-            const newPrice = parseFloat(input.value);
-            if (!isNaN(newPrice) && appState.prices.preciosPizzas[idx]) {
-                if (type === 'entera') appState.prices.preciosPizzas[idx].precioEntera = newPrice;
-                if (type === 'media')  appState.prices.preciosPizzas[idx].precioMedia  = newPrice;
-            }
-        });
+        if (window.electronAPI && typeof window.electronAPI.updateProductPrice === 'function') {
+            appState.prices.beverages.forEach(bev => {
+                if (bev && bev.name) {
+                    window.electronAPI.updateProductPrice({ productName: bev.name, newPrice: bev.price, category: bev.category });
+                }
+            });
+            appState.prices.preciosPizzas.forEach(pizza => {
+                if (pizza && pizza.name) {
+                    window.electronAPI.updateProductPrice({ productName: `Pizza ${pizza.name}`, newPrice: pizza.precioEntera, category: 'Pizzas' });
+                }
+            });
+            window.electronAPI.updateProductPrice({ productName: 'Pizza Libre Hombres', newPrice: appState.prices.pizzaLibreH, category: 'Comida' });
+            window.electronAPI.updateProductPrice({ productName: 'Pizza Libre Mujeres', newPrice: appState.prices.pizzaLibreM, category: 'Comida' });
+            window.electronAPI.updateProductPrice({ productName: 'Pizza Libre General', newPrice: appState.prices.pizzaLibreG, category: 'Comida' });
+            window.electronAPI.updateProductPrice({ productName: 'Empanada de Carne', newPrice: appState.prices.empanada, category: 'Comida' });
+            window.electronAPI.updateProductPrice({ productName: 'Menú Ejecutivo', newPrice: appState.prices.precioMenuMiercoles, category: 'Comida' });
+            window.electronAPI.updateProductPrice({ productName: 'Postre', newPrice: appState.prices.precioPostre, category: 'Comida' });
+        }
 
         saveState();
         closePricesModal();
     });
+
 
     showTotalBtn.addEventListener('click', () => {
         const grand = calculateGrandTotal(appState.tables, appState.barOrders, appState.prices, appState.currentMode);
@@ -1468,15 +1747,44 @@ document.addEventListener('DOMContentLoaded', async () => {
         </style></head><body><div class="ticket">${bodyHtml}</div></body></html>`;
 
         const w = window.open('', '_blank', 'toolbar=0,location=0,menubar=0');
-        if (!w) { alert('Permite ventanas emergentes para imprimir.'); return; }
+        if (!w) { showSystemAlert('Permite ventanas emergentes para imprimir.', 'Impresión'); return; }
         w.document.open(); w.document.write(ticketHtml); w.document.close();
         w.focus();
         setTimeout(() => { w.print(); w.close(); }, 900);
     });
 
+    if (mozoSwitcher) {
+        mozoSwitcher.value = appState.currentMozo || 'Mozo 1';
+        mozoSwitcher.addEventListener('change', e => {
+            appState.currentMozo = e.target.value;
+            saveState();
+            renderAll();
+            if (activeEntity) updateModalLockState();
+            showModeToast(appState.currentMode, `Mozo activo cambiado a: ${appState.currentMozo}`);
+        });
+    }
+
+    if (duplicateCancelBtn) {
+        duplicateCancelBtn.addEventListener('click', () => {
+            pendingDuplicateAction = null;
+            if (duplicateWarningModal) duplicateWarningModal.style.display = 'none';
+        });
+    }
+
+    if (duplicateConfirmBtn) {
+        duplicateConfirmBtn.addEventListener('click', () => {
+            if (pendingDuplicateAction) {
+                pendingDuplicateAction();
+                pendingDuplicateAction = null;
+            }
+            if (duplicateWarningModal) duplicateWarningModal.style.display = 'none';
+        });
+    }
+
     // ── INICIALIZACIÓN ────────────────────────────────────────────────────────
     await loadState();
     modeSwitcher.value        = appState.currentMode;
+    if (mozoSwitcher) mozoSwitcher.value = appState.currentMozo || 'Mozo 1';
     kitchenNumberInput.value  = appState.numeroCocina;
     updateUIMode(appState.currentMode);
     pizzaSizeSelect.dispatchEvent(new Event('change'));
