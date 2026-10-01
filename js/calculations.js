@@ -156,11 +156,31 @@ function generateSalesReport(tables = [], barOrders = [], prices = {}, currentMo
         customPizzaToppingsCount[p.name] = 0;
     });
 
+    function normalizeBeverageCategory(category, name = '') {
+        if (category) {
+            const c = String(category).toLowerCase().trim();
+            if (c === 'cerveza' || c === 'cervezas') return 'cervezas';
+            if (c === 'gaseosa' || c === 'gaseosas') return 'gaseosas';
+            if (c === 'agua' || c === 'aguas' || c === 'saborizada' || c === 'saborizadas') return 'aguas';
+            if (c === 'jarro' || c === 'jarros' || c === 'trago' || c === 'tragos') return 'tragos';
+            if (c === 'vino' || c === 'vinos') return 'vinos';
+            if (c === 'otra' || c === 'otras' || c === 'otro' || c === 'otros') return 'otras';
+        }
+        const n = String(name || '').toLowerCase();
+        if (n.includes('cerveza') || n.includes('heineken') || n.includes('pilsen') || n.includes('santa fe')) return 'cervezas';
+        if (n.includes('vino') || n.includes('cosecha') || n.includes('portillo') || n.includes('valentin') || n.includes('cordero') || n.includes('alma mora') || n.includes('latitud') || n.includes('salentein') || n.includes('rutini')) return 'vinos';
+        if (n.includes('fernet') || n.includes('gancia') || n.includes('piña colada') || n.includes('gin') || n.includes('whisky') || n.includes('ginebra') || n.includes('jarro') || n.includes('trago')) return 'tragos';
+        if (n.includes('soda') || n.includes('agua') || n.includes('saborizada')) return 'aguas';
+        if (n.includes('coca') || n.includes('sprite') || n.includes('gaseosa') || n.includes('lata')) return 'gaseosas';
+        if (n.includes('vermú') || n.includes('vermut')) return 'otras';
+        return 'otras';
+    }
+
     const beveragesMap = {}; // name -> { name, category, price, units, subtotal }
     (prices.beverages || []).forEach(bev => {
         beveragesMap[bev.name] = {
             name: bev.name,
-            category: bev.category || 'otro',
+            category: normalizeBeverageCategory(bev.category, bev.name),
             price: Number(bev.price) || 0,
             units: 0,
             subtotal: 0
@@ -308,7 +328,7 @@ function generateSalesReport(tables = [], barOrders = [], prices = {}, currentMo
                     const foundBev = (prices.beverages || []).find(b => b.name === bev.name) || {};
                     beveragesMap[bev.name] = {
                         name: bev.name,
-                        category: foundBev.category || 'otro',
+                        category: normalizeBeverageCategory(foundBev.category, bev.name),
                         price: Number(foundBev.price) || 0,
                         units: 0,
                         subtotal: 0
@@ -349,15 +369,14 @@ function generateSalesReport(tables = [], barOrders = [], prices = {}, currentMo
         percentOfBeveragesRevenue: bebidaSubtotal > 0 ? ((b.subtotal / bebidaSubtotal) * 100) : 0
     }));
 
-    // Categorías de bebidas agrupadas
+    // Categorías de bebidas agrupadas en el orden oficial del restaurante
     const BEV_CAT_CONFIG = [
-        { id: 'vino',       label: 'Vinos',             icon: '', color: '#475569' },
-        { id: 'cerveza',    label: 'Cervezas',          icon: '', color: '#334155' },
-        { id: 'gaseosa',    label: 'Gaseosas',          icon: '', color: '#1E293B' },
-        { id: 'agua',       label: 'Aguas',             icon: '', color: '#2563EB' },
-        { id: 'saborizada', label: 'Aguas Saborizadas', icon: '', color: '#0F766E' },
-        { id: 'jarro',      label: 'Jarros / Tragos',   icon: '', color: '#4F46E5' },
-        { id: 'otro',       label: 'Otras Bebidas',     icon: '', color: '#64748B' }
+        { id: 'cervezas', label: 'Cervezas',               icon: '🍺', color: '#D97706' },
+        { id: 'gaseosas', label: 'Gaseosas y Saborizadas', icon: '🥤', color: '#DC2626' },
+        { id: 'aguas',    label: 'Aguas y Sodas',          icon: '💧', color: '#2563EB' },
+        { id: 'tragos',   label: 'Tragos',                 icon: '🍹', color: '#7C3AED' },
+        { id: 'vinos',    label: 'Vinos',                  icon: '🍷', color: '#9333EA' },
+        { id: 'otras',    label: 'Otras Bebidas',          icon: '🍸', color: '#64748B' }
     ];
 
     const beverageCategoryBreakdown = BEV_CAT_CONFIG.map(cat => {

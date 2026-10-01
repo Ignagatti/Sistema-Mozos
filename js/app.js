@@ -150,15 +150,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     const totalModalPersonasCount  = document.getElementById('total-modal-personas-count');
     const totalModalPersonasDetail = document.getElementById('total-modal-personas-detail');
 
-    // Categorías de bebidas organizadas
+    // Categorías de bebidas organizadas en el orden oficial del restaurante
     const BEVERAGE_CATEGORIES = [
-        { id: 'vino',       label: 'Vinos',            icon: '🍷' },
-        { id: 'cerveza',    label: 'Cervezas',         icon: '🍺' },
-        { id: 'gaseosa',    label: 'Gaseosas',         icon: '🥤' },
-        { id: 'agua',       label: 'Aguas',            icon: '💧' },
-        { id: 'saborizada', label: 'Aguas Saborizadas',icon: '🍊' },
-        { id: 'jarro',      label: 'Jarros / Tragos',  icon: '🍹' },
-        { id: 'otro',       label: 'Otras Bebidas',    icon: '📦' }
+        { id: 'cervezas', label: 'Cervezas',               icon: '🍺' },
+        { id: 'gaseosas', label: 'Gaseosas y Saborizadas', icon: '🥤' },
+        { id: 'aguas',    label: 'Aguas y Sodas',          icon: '💧' },
+        { id: 'tragos',   label: 'Tragos',                 icon: '🍹' },
+        { id: 'vinos',    label: 'Vinos',                  icon: '🍷' },
+        { id: 'otras',    label: 'Otras Bebidas',          icon: '🍸' }
     ];
 
     // ── UI STATE (no se persiste) ─────────────────────────────────────────────
@@ -184,38 +183,48 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     function resolveBeverageCategory(name, category) {
-        if (category && category !== 'otro') return category;
-        const n = (name || '').toLowerCase();
-        if (n.includes('agua') && !n.includes('saborizada')) return 'agua';
-        if (n.includes('saborizada') || n.includes('naranja') || n.includes('pomelo') || n.includes('manzana')) return 'saborizada';
-        if (n.includes('lata') || n.includes('coca') || n.includes('sprite') || n.includes('zero') || n.includes('pepsi') || n.includes('fanta') || n.includes('gaseosa')) return 'gaseosa';
-        if (n.includes('cerveza') || n.includes('heineken') || n.includes('corona') || n.includes('pilsen') || n.includes('stella') || n.includes('brahma') || n.includes('quilmes') || n.includes('santa fe')) return 'cerveza';
-        if (n.includes('vino') || n.includes('malbec') || n.includes('cabernet') || n.includes('tintillo') || n.includes('chardonnay') || n.includes('syrah') || n.includes('merlot') || n.includes('valentin') || n.includes('latitud') || n.includes('cordero') || n.includes('alma mora')) return 'vino';
-        if (n.includes('fernet') || n.includes('gancia') || n.includes('jarro') || n.includes('trago') || n.includes('campari') || n.includes('gin') || n.includes('vodka')) return 'jarro';
-        return category || 'otro';
+        if (category) {
+            const c = String(category).toLowerCase().trim();
+            if (c === 'cerveza' || c === 'cervezas') return 'cervezas';
+            if (c === 'gaseosa' || c === 'gaseosas') return 'gaseosas';
+            if (c === 'agua' || c === 'aguas' || c === 'saborizada' || c === 'saborizadas') return 'aguas';
+            if (c === 'jarro' || c === 'jarros' || c === 'trago' || c === 'tragos') return 'tragos';
+            if (c === 'vino' || c === 'vinos') return 'vinos';
+            if (c === 'otra' || c === 'otras' || c === 'otro' || c === 'otros') return 'otras';
+        }
+
+        const n = String(name || '').toLowerCase();
+        if (n.includes('cerveza') || n.includes('heineken') || n.includes('pilsen') || n.includes('santa fe') || n.includes('corona') || n.includes('brahma') || n.includes('quilmes')) return 'cervezas';
+        if (n.includes('vino') || n.includes('cosecha') || n.includes('portillo') || n.includes('valentin') || n.includes('cordero') || n.includes('alma mora') || n.includes('latitud') || n.includes('salentein') || n.includes('rutini') || n.includes('malbec') || n.includes('cabernet')) return 'vinos';
+        if (n.includes('fernet') || n.includes('gancia') || n.includes('piña colada') || n.includes('gin') || n.includes('whisky') || n.includes('ginebra') || n.includes('jarro') || n.includes('trago') || n.includes('medida')) return 'tragos';
+        if (n.includes('soda') || n.includes('agua') || n.includes('saborizada')) return 'aguas';
+        if (n.includes('coca') || n.includes('sprite') || n.includes('gaseosa') || n.includes('lata')) return 'gaseosas';
+        if (n.includes('vermú') || n.includes('vermut')) return 'otras';
+
+        return 'otras';
     }
 
-    function getBeverageColor(name, category = 'otro') {
+    function getBeverageColor(name, category = 'otras') {
         switch (resolveBeverageCategory(name, category)) {
-            case 'agua':       return 'bg-blue-200 border-blue-500';
-            case 'saborizada': return 'bg-orange-200 border-orange-500';
-            case 'gaseosa':    return 'bg-red-200 border-red-500';
-            case 'cerveza':    return 'bg-yellow-200 border-yellow-500';
-            case 'vino':       return 'bg-purple-200 border-purple-500';
-            case 'jarro':      return 'bg-indigo-200 border-indigo-500 text-indigo-900';
-            default:           return 'bg-gray-100 border-gray-400';
+            case 'cervezas': return 'bg-amber-100 border-amber-500 text-amber-900';
+            case 'gaseosas': return 'bg-red-100 border-red-500 text-red-900';
+            case 'aguas':    return 'bg-blue-100 border-blue-500 text-blue-900';
+            case 'tragos':   return 'bg-purple-100 border-purple-500 text-purple-900';
+            case 'vinos':    return 'bg-rose-100 border-rose-600 text-rose-950';
+            case 'otras':    return 'bg-slate-100 border-slate-500 text-slate-800';
+            default:         return 'bg-gray-100 border-gray-400 text-gray-800';
         }
     }
 
-    function getBeverageOptionStyle(name, category = 'otro') {
+    function getBeverageOptionStyle(name, category = 'otras') {
         switch (resolveBeverageCategory(name, category)) {
-            case 'agua':       return { bg: '#90CDF4', text: '#2A4365' };
-            case 'saborizada': return { bg: '#FBD38D', text: '#9C4221' };
-            case 'gaseosa':    return { bg: '#FC8181', text: '#9B2C2C' };
-            case 'cerveza':    return { bg: '#F0E68C', text: '#975A16' };
-            case 'vino':       return { bg: '#B794F4', text: '#44337A' };
-            case 'jarro':      return { bg: '#C3DAFE', text: '#2C5282' };
-            default:           return { bg: '#FFFFFF', text: '#1A202C' };
+            case 'cervezas': return { bg: '#FEF3C7', text: '#78350F' };
+            case 'gaseosas': return { bg: '#FEE2E2', text: '#991B1B' };
+            case 'aguas':    return { bg: '#DBEAFE', text: '#1E40AF' };
+            case 'tragos':   return { bg: '#F3E8FF', text: '#6B21A8' };
+            case 'vinos':    return { bg: '#FFE4E6', text: '#881337' };
+            case 'otras':    return { bg: '#F1F5F9', text: '#334155' };
+            default:         return { bg: '#FFFFFF', text: '#1A202C' };
         }
     }
 

@@ -17,27 +17,43 @@ const DEFAULT_PRICES = {
         { name: 'Anchoas',    precioEntera: 0, precioMedia: 0 }
     ],
     beverages: [
-        { name: 'Lata de Coca',                 price: 0, category: 'gaseosa'    },
-        { name: 'Lata de Sprite',               price: 0, category: 'gaseosa'    },
-        { name: 'Coca-Cola 1.5L',               price: 0, category: 'gaseosa'    },
-        { name: 'Sprite 1.5L',                  price: 0, category: 'gaseosa'    },
-        { name: 'Coca-Cola Zero 1.5L',          price: 0, category: 'gaseosa'    },
-        { name: 'Agua 1.5L',                    price: 0, category: 'agua'       },
-        { name: 'Agua Saborizada Naranja',       price: 0, category: 'saborizada' },
-        { name: 'Agua Saborizada Pomelo',        price: 0, category: 'saborizada' },
-        { name: 'Agua Saborizada Manzana',       price: 0, category: 'saborizada' },
-        { name: 'Jarro Fernet',                  price: 0, category: 'jarro'      },
-        { name: 'Jarro Gancia',                  price: 0, category: 'jarro'      },
-        { name: 'Vino Latitud 33',               price: 0, category: 'vino'       },
-        { name: 'Vino Valentin Lacrado',         price: 0, category: 'vino'       },
-        { name: 'Vino Alma Mora',                price: 0, category: 'vino'       },
-        { name: 'Vino Cordero con Piel de Lobo', price: 0, category: 'vino'       },
-        { name: 'Vino Valentin Blanco',          price: 0, category: 'vino'       },
-        { name: 'Vaso de Vino con Soda',         price: 0, category: 'vino'       },
-        { name: 'Vaso de Vino Solo',             price: 0, category: 'vino'       },
-        { name: 'Cerveza Pilsen',                price: 0, category: 'cerveza'    },
-        { name: 'Cerveza Santa Fe',              price: 0, category: 'cerveza'    },
-        { name: 'Cerveza Heineken',              price: 0, category: 'cerveza'    }
+        // 1. Cervezas (Orden 1)
+        { name: 'Cerveza Santa Fe',                       price: 0, category: 'cervezas' },
+        { name: 'Cerveza Pilsen',                         price: 0, category: 'cervezas' },
+        { name: 'Cerveza Heineken',                       price: 0, category: 'cervezas' },
+
+        // 2. Gaseosas y Saborizadas (Orden 2)
+        { name: 'Coca/Sprite',                            price: 0, category: 'gaseosas' },
+        { name: 'Lata de coca/sprite',                    price: 0, category: 'gaseosas' },
+
+        // 3. Aguas y Sodas (Orden 3)
+        { name: 'Agua',                                   price: 0, category: 'aguas'    },
+        { name: 'Agua saborizada (manzana/pomelo/naranja)', price: 0, category: 'aguas'  },
+        { name: 'Soda',                                   price: 0, category: 'aguas'    },
+
+        // 4. Tragos (Orden 4)
+        { name: 'Jarro de fernet/gancia',                 price: 0, category: 'tragos'   },
+        { name: 'Lata de coca/sprite+fernet',             price: 0, category: 'tragos'   },
+        { name: 'Medida de fernet',                       price: 0, category: 'tragos'   },
+        { name: 'Piña colada',                            price: 0, category: 'tragos'   },
+        { name: 'Gin Tonic',                              price: 0, category: 'tragos'   },
+        { name: 'Whisky/Ginebra',                         price: 0, category: 'tragos'   },
+
+        // 5. Vinos (Orden 5)
+        { name: 'Vino blanco Cosecha Tardía (dulce)',     price: 0, category: 'vinos'    },
+        { name: 'Vino blanco Alma Mora (dulce)',          price: 0, category: 'vinos'    },
+        { name: 'Vino blanco Portillo',                   price: 0, category: 'vinos'    },
+        { name: 'Vino blanco Latitud',                    price: 0, category: 'vinos'    },
+        { name: 'Vino blanco Valentin',                   price: 0, category: 'vinos'    },
+        { name: 'Vino tinto Valentin',                    price: 0, category: 'vinos'    },
+        { name: 'Vino tinto Cordero con Piel de Lobo',    price: 0, category: 'vinos'    },
+        { name: 'Vino tinto Alma Mora',                   price: 0, category: 'vinos'    },
+        { name: 'Vino tinto Latitud 33',                  price: 0, category: 'vinos'    },
+        { name: 'Vino tinto Salentein',                   price: 0, category: 'vinos'    },
+        { name: 'Vino tinto Rutini',                      price: 0, category: 'vinos'    },
+
+        // 6. Otras Bebidas (Orden 6)
+        { name: 'Vermú',                                  price: 0, category: 'otras'    }
     ]
 };
 
@@ -83,15 +99,25 @@ async function saveState() {
 }
 
 function resolveBeverageCategory(name, category) {
-    if (category && category !== 'otro') return category;
-    const n = (name || '').toLowerCase();
-    if (n.includes('agua') && !n.includes('saborizada')) return 'agua';
-    if (n.includes('saborizada') || n.includes('naranja') || n.includes('pomelo') || n.includes('manzana')) return 'saborizada';
-    if (n.includes('lata') || n.includes('coca') || n.includes('sprite') || n.includes('zero') || n.includes('pepsi') || n.includes('fanta') || n.includes('gaseosa')) return 'gaseosa';
-    if (n.includes('cerveza') || n.includes('heineken') || n.includes('corona') || n.includes('pilsen') || n.includes('stella') || n.includes('brahma') || n.includes('quilmes') || n.includes('santa fe')) return 'cerveza';
-    if (n.includes('vino') || n.includes('malbec') || n.includes('cabernet') || n.includes('tintillo') || n.includes('chardonnay') || n.includes('syrah') || n.includes('merlot') || n.includes('valentin') || n.includes('latitud') || n.includes('cordero') || n.includes('alma mora')) return 'vino';
-    if (n.includes('fernet') || n.includes('gancia') || n.includes('jarro') || n.includes('trago') || n.includes('campari') || n.includes('gin') || n.includes('vodka')) return 'jarro';
-    return category || 'otro';
+    if (category) {
+        const c = String(category).toLowerCase().trim();
+        if (c === 'cerveza' || c === 'cervezas') return 'cervezas';
+        if (c === 'gaseosa' || c === 'gaseosas') return 'gaseosas';
+        if (c === 'agua' || c === 'aguas' || c === 'saborizada' || c === 'saborizadas') return 'aguas';
+        if (c === 'jarro' || c === 'jarros' || c === 'trago' || c === 'tragos') return 'tragos';
+        if (c === 'vino' || c === 'vinos') return 'vinos';
+        if (c === 'otra' || c === 'otras' || c === 'otro' || c === 'otros') return 'otras';
+    }
+
+    const n = String(name || '').toLowerCase();
+    if (n.includes('cerveza') || n.includes('heineken') || n.includes('pilsen') || n.includes('santa fe') || n.includes('corona') || n.includes('brahma') || n.includes('quilmes')) return 'cervezas';
+    if (n.includes('vino') || n.includes('cosecha') || n.includes('portillo') || n.includes('valentin') || n.includes('cordero') || n.includes('alma mora') || n.includes('latitud') || n.includes('salentein') || n.includes('rutini') || n.includes('malbec') || n.includes('cabernet')) return 'vinos';
+    if (n.includes('fernet') || n.includes('gancia') || n.includes('piña colada') || n.includes('gin') || n.includes('whisky') || n.includes('ginebra') || n.includes('jarro') || n.includes('trago') || n.includes('medida')) return 'tragos';
+    if (n.includes('soda') || n.includes('agua') || n.includes('saborizada')) return 'aguas';
+    if (n.includes('coca') || n.includes('sprite') || n.includes('gaseosa') || n.includes('lata')) return 'gaseosas';
+    if (n.includes('vermú') || n.includes('vermut')) return 'otras';
+
+    return 'otras';
 }
 
 async function loadState() {
@@ -111,15 +137,43 @@ async function loadState() {
 
         // Merge de precios: los valores del archivo prevalecen, se preservan defaults para campos nuevos
         appState.prices = Object.assign(JSON.parse(JSON.stringify(DEFAULT_PRICES)), saved.prices || {});
-        if (saved.prices && saved.prices.beverages) {
-            appState.prices.beverages = saved.prices.beverages.map(bev => ({
-                name: bev.name,
-                price: Number(bev.price) || 0,
-                category: resolveBeverageCategory(bev.name, bev.category)
-            }));
+        if (saved.prices && Array.isArray(saved.prices.beverages)) {
+            const savedPriceMap = new Map();
+            saved.prices.beverages.forEach(b => {
+                if (b && b.name) savedPriceMap.set(b.name.trim().toLowerCase(), Number(b.price) || 0);
+            });
+
+            // Usar catálogo oficial y aplicar precios guardados si ya existían
+            const mergedBeverages = DEFAULT_PRICES.beverages.map(bev => {
+                const key = bev.name.trim().toLowerCase();
+                const price = savedPriceMap.has(key) ? savedPriceMap.get(key) : bev.price;
+                savedPriceMap.delete(key);
+                return {
+                    name: bev.name,
+                    price: price,
+                    category: bev.category
+                };
+            });
+
+            // Si había bebidas adicionales personalizadas creadas por el usuario, mantenerlas
+            saved.prices.beverages.forEach(bev => {
+                if (bev && bev.name) {
+                    const key = bev.name.trim().toLowerCase();
+                    if (savedPriceMap.has(key)) {
+                        mergedBeverages.push({
+                            name: bev.name,
+                            price: Number(bev.price) || 0,
+                            category: resolveBeverageCategory(bev.name, bev.category)
+                        });
+                    }
+                }
+            });
+
+            appState.prices.beverages = mergedBeverages;
         }
         if (saved.prices && saved.prices.preciosPizzas) appState.prices.preciosPizzas = saved.prices.preciosPizzas;
     } catch (e) {
         console.error('Error al parsear el estado guardado:', e);
     }
 }
+
