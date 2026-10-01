@@ -122,7 +122,7 @@ app.whenReady().then(() => {
   });
 
 require('dotenv').config();
-const NEON_CONN_STRING = process.env.DATABASE_URL || process.env.NEON_DATABASE_URL || 'postgresql://neondb_owner:npg_IDfWvs28wpNB@ep-royal-breeze-b5v5b7vx-pooler.c-7.us-east-2.aws.neon.tech/neondb?sslmode=verify-full';
+const NEON_CONN_STRING = process.env.DATABASE_URL || process.env.NEON_DATABASE_URL || 'postgresql://neondb_owner:npg_DlXN1qQac5bF@ep-royal-breeze-b5v5b7vx-pooler.c-7.us-east-2.aws.neon.tech/neondb?sslmode=verify-full';
 
   // Maneja la carga de datos desde Neon Cloud DB
   ipcMain.handle('load-cloud-data', async () => {
@@ -136,7 +136,10 @@ const NEON_CONN_STRING = process.env.DATABASE_URL || process.env.NEON_DATABASE_U
       const prodsRes = await client.query("SELECT nombre, categoria, precio FROM productos WHERE activo = true;");
       const dbProducts = prodsRes.rows;
 
-      return { success: true, snapshot, dbProducts };
+      const entitiesRes = await client.query("SELECT id, entity_type, data FROM pos_entities;");
+      const cloudEntities = entitiesRes.rows;
+
+      return { success: true, snapshot, dbProducts, cloudEntities };
     } catch (err) {
       console.error('Error cargando datos de Neon DB:', err);
       return { success: false, error: err.message };
@@ -239,8 +242,7 @@ const NEON_CONN_STRING = process.env.DATABASE_URL || process.env.NEON_DATABASE_U
   // Maneja el Cierre de Caja General y cambio de jornada global en Neon DB
   ipcMain.handle('close-global-shift', async () => {
     const { Client } = require('pg');
-    const connectionString = 'postgresql://neondb_owner:npg_IDfWvs28wpNB@ep-royal-breeze-b5v5b7vx-pooler.c-7.us-east-2.aws.neon.tech/neondb?sslmode=require';
-    const client = new Client({ connectionString });
+    const client = new Client({ connectionString: NEON_CONN_STRING });
     try {
       await client.connect();
       await client.query(
@@ -249,6 +251,58 @@ const NEON_CONN_STRING = process.env.DATABASE_URL || process.env.NEON_DATABASE_U
       return { success: true };
     } catch (err) {
       console.error('Error cerrando jornada global en Neon DB:', err);
+      return { success: false, error: err.message };
+    } finally {
+      await client.end().catch(() => {});
+    }
+  });
+
+  ipcMain.handle('save-cloud-entity', async (event, { entity, type }) => {
+    if (!entity || !entity.id || !type) return { success: false, error: 'Invalid entity data' };
+    const { Client } = require('pg');
+    const client = new Client({ connectionString: NEON_CONN_STRING });
+    try {
+      await client.connect();
+      await client.query(
+        `INSERT INTO pos_entities (id, entity_type, data, updated_at)
+         VALUES ($1, $2, $3, CURRENT_TIMESTAMP)
+         ON CONFLICT (id) DO UPDATE SET data = EXCLUDED.data, entity_type = EXCLUDED.entity_type, updated_at = CURRENT_TIMESTAMP;`,
+        [entity.id, type, JSON.stringify(entity)]
+      );
+      return { success: true };
+    } catch (err) {
+      console.error('Error saving entity in Neon DB:', err);
+      return { success: false, error: err.message };
+    } finally {
+      await client.end().catch(() => {});
+    }
+  });
+
+  ipcMain.handle('delete-cloud-entity', async (event, { id }) => {
+    if (!id) return { success: false, error: 'Entity id required' };
+    const { Client } = require('pg');
+    const client = new Client({ connectionString: NEON_CONN_STRING });
+    try {
+      await client.connect();
+      await client.query('DELETE FROM pos_entities WHERE id = $1;', [id]);
+      return { success: true };
+    } catch (err) {
+      console.error('Error deleting entity from Neon DB:', err);
+      return { success: false, error: err.message };
+    } finally {
+      await client.end().catch(() => {});
+    }
+  });
+
+  ipcMain.handle('clear-all-entities', async () => {
+    const { Client } = require('pg');
+    const client = new Client({ connectionString: NEON_CONN_STRING });
+    try {
+      await client.connect();
+      await client.query('TRUNCATE TABLE pos_entities;');
+      return { success: true };
+    } catch (err) {
+      console.error('Error clearing entities in Neon DB:', err);
       return { success: false, error: err.message };
     } finally {
       await client.end().catch(() => {});

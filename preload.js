@@ -25,6 +25,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
   updateProductPrice: (data) => ipcRenderer.invoke('update-product-price', data),
   deleteProduct: (data) => ipcRenderer.invoke('delete-product', data),
 
+  // Nuevas funciones granulares para multipantalla
+  saveCloudEntity: (data) => ipcRenderer.invoke('save-cloud-entity', data),
+  deleteCloudEntity: (data) => ipcRenderer.invoke('delete-cloud-entity', data),
+  clearAllEntities: () => ipcRenderer.invoke('clear-all-entities'),
+
   // Función para realizar el Cierre de Caja General y cambio de jornada global en Neon DB
   closeGlobalShift: () => ipcRenderer.invoke('close-global-shift')
 });

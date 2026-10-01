@@ -1783,10 +1783,26 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // ── INICIALIZACIÓN ────────────────────────────────────────────────────────
     await loadState();
+    
+    // Inicializar strings de diff para no resubir todo de entrada
+    if (typeof lastSavedTablesStr !== 'undefined') {
+        lastSavedTablesStr = JSON.stringify(appState.tables);
+        lastSavedBarOrdersStr = JSON.stringify(appState.barOrders);
+    }
+
     modeSwitcher.value        = appState.currentMode;
     if (mozoSwitcher) mozoSwitcher.value = appState.currentMozo || 'Mozo 1';
     kitchenNumberInput.value  = appState.numeroCocina;
     updateUIMode(appState.currentMode);
     pizzaSizeSelect.dispatchEvent(new Event('change'));
+    
+    window.renderAll = renderAll;
     renderAll();
+
+    // Iniciar Polling de la Nube cada 1.5 segundos para que se sienta casi instantáneo
+    setInterval(() => {
+        if (typeof pollCloudState === 'function') {
+            pollCloudState(activeEntity ? activeEntity.id : null);
+        }
+    }, 1500);
 });

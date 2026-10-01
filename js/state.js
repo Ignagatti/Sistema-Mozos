@@ -102,6 +102,9 @@ function getNewOrderObject() {
     };
 }
 
+let lastSavedTablesStr = "[]";
+let lastSavedBarOrdersStr = "[]";
+
 // Persistencia: localStorage + archivo local userData + Neon Cloud PostgreSQL DB
 async function saveState() {
     const snapshot = {
@@ -122,11 +125,135 @@ async function saveState() {
         if (typeof window.electronAPI.saveBackup === 'function') {
             await window.electronAPI.saveBackup(dataStr).catch(err => console.error('Error al guardar backup local:', err));
         }
+
+        // Differencial de Mesas
+        const currentTablesStr = JSON.stringify(appState.tables);
+        if (currentTablesStr !== lastSavedTablesStr) {
+            const currentTables = JSON.parse(currentTablesStr);
+            const oldTables = JSON.parse(lastSavedTablesStr);
+            currentTables.forEach(t => {
+                const oldT = oldTables.find(o => o.id === t.id);
+                if (!oldT || JSON.stringify(oldT) !== JSON.stringify(t)) {
+                    saveEntity(t, 'table');
+                }
+            });
+            oldTables.forEach(o => {
+                if (!currentTables.find(t => t.id === o.id)) deleteEntityFromCloud(o.id);
+            });
+            lastSavedTablesStr = currentTablesStr;
+        }
+
+        // Differencial de Barra
+        const currentBarStr = JSON.stringify(appState.barOrders);
+        if (currentBarStr !== lastSavedBarOrdersStr) {
+            const currentBar = JSON.parse(currentBarStr);
+            const oldBar = JSON.parse(lastSavedBarOrdersStr);
+            currentBar.forEach(t => {
+                const oldT = oldBar.find(o => o.id === t.id);
+                if (!oldT || JSON.stringify(oldT) !== JSON.stringify(t)) {
+                    saveEntity(t, 'barOrder');
+                }
+            });
+            oldBar.forEach(o => {
+                if (!currentBar.find(t => t.id === o.id)) deleteEntityFromCloud(o.id);
+            });
+            lastSavedBarOrdersStr = currentBarStr;
+        }
+
+        // Snapshot global (modo, mozo, nextTableNumber, etc. SIN tablas para ahorrar DB)
+        const globalSnapshot = { ...snapshot, tables: [], barOrders: [] };
         if (typeof window.electronAPI.syncCloudState === 'function') {
-            window.electronAPI.syncCloudState(snapshot).catch(err => console.error('Error sincronizando con Neon DB:', err));
+            window.electronAPI.syncCloudState(globalSnapshot).catch(err => console.error('Error sincronizando con Neon DB:', err));
         }
     }
 }
+
+async function pollCloudState(activeEntityId) {
+    if (typeof window !== 'undefined' && window.electronAPI && typeof window.electronAPI.loadCloudData === 'function') {
+        try {
+            const cloudRes = await window.electronAPI.loadCloudData();
+            if (cloudRes && cloudRes.success && cloudRes.cloudEntities) {
+                let needsRender = false;
+                const loadedTables = [];
+                const loadedBarOrders = [];
+                cloudRes.cloudEntities.forEach(entity => {
+                    if (entity.entity_type === 'table') loadedTables.push(entity.data);
+                    else if (entity.entity_type === 'barOrder') loadedBarOrders.push(entity.data);
+                });
+
+                // Merge Tables
+                loadedTables.forEach(cloudTable => {
+                    const localIdx = appState.tables.findIndex(t => t.id === cloudTable.id);
+                    if (localIdx === -1) {
+                        appState.tables.push(cloudTable);
+                        needsRender = true;
+                    } else {
+                        // Skip if currently being edited
+                        if (activeEntityId === cloudTable.id) return;
+                        if (JSON.stringify(appState.tables[localIdx]) !== JSON.stringify(cloudTable)) {
+                            appState.tables[localIdx] = cloudTable;
+                            needsRender = true;
+                        }
+                    }
+                });
+                
+                // Remove local tables deleted in cloud
+                for (let i = appState.tables.length - 1; i >= 0; i--) {
+                    const t = appState.tables[i];
+                    if (!loadedTables.find(ct => ct.id === t.id)) {
+                        if (activeEntityId === t.id) continue;
+                        appState.tables.splice(i, 1);
+                        needsRender = true;
+                    }
+                }
+
+                // Merge Bar Orders (similar logic)
+                loadedBarOrders.forEach(cloudBar => {
+                    const localIdx = appState.barOrders.findIndex(t => t.id === cloudBar.id);
+                    if (localIdx === -1) {
+                        appState.barOrders.push(cloudBar);
+                        needsRender = true;
+                    } else {
+                        if (activeEntityId === cloudBar.id) return;
+                        if (JSON.stringify(appState.barOrders[localIdx]) !== JSON.stringify(cloudBar)) {
+                            appState.barOrders[localIdx] = cloudBar;
+                            needsRender = true;
+                        }
+                    }
+                });
+                for (let i = appState.barOrders.length - 1; i >= 0; i--) {
+                    const t = appState.barOrders[i];
+                    if (!loadedBarOrders.find(ct => ct.id === t.id)) {
+                        if (activeEntityId === t.id) continue;
+                        appState.barOrders.splice(i, 1);
+                        needsRender = true;
+                    }
+                }
+
+                if (needsRender) {
+                    lastSavedTablesStr = JSON.stringify(appState.tables);
+                    lastSavedBarOrdersStr = JSON.stringify(appState.barOrders);
+                    if (typeof window.renderAll === 'function') window.renderAll();
+                }
+            }
+        } catch (e) {
+            console.error('Polling error', e);
+        }
+    }
+}
+
+async function saveEntity(entity, type) {
+    if (typeof window !== 'undefined' && window.electronAPI && typeof window.electronAPI.saveCloudEntity === 'function') {
+        window.electronAPI.saveCloudEntity({ entity, type }).catch(err => console.error('Error saving entity:', err));
+    }
+}
+
+async function deleteEntityFromCloud(id) {
+    if (typeof window !== 'undefined' && window.electronAPI && typeof window.electronAPI.deleteCloudEntity === 'function') {
+        window.electronAPI.deleteCloudEntity({ id }).catch(err => console.error('Error deleting entity:', err));
+    }
+}
+
 
 function resolveBeverageCategory(name, category) {
     if (category) {
@@ -197,15 +324,29 @@ async function loadState() {
                 return null;
             });
             if (cloudRes && cloudRes.success) {
-                // Cargar estado operativo del snapshot (mesas, barra, modo)
+                // Cargar estado operativo del snapshot (modo, contador)
                 if (cloudRes.snapshot) {
                     const snap = cloudRes.snapshot;
-                    if (snap.tables && snap.tables.length > 0) appState.tables = snap.tables;
-                    if (snap.barOrders && snap.barOrders.length > 0) appState.barOrders = snap.barOrders;
                     if (snap.nextTableNumber) appState.nextTableNumber = snap.nextTableNumber;
                     if (snap.currentMode) appState.currentMode = snap.currentMode;
                     if (snap.numeroCocina) appState.numeroCocina = snap.numeroCocina;
                     if (snap.genericData) appState.genericData = Object.assign({}, DEFAULT_GENERIC_DATA, snap.genericData);
+                }
+                
+                // Cargar mesas y barra desde pos_entities
+                if (cloudRes.cloudEntities && Array.isArray(cloudRes.cloudEntities)) {
+                    const loadedTables = [];
+                    const loadedBarOrders = [];
+                    cloudRes.cloudEntities.forEach(entity => {
+                        if (entity.entity_type === 'table') loadedTables.push(entity.data);
+                        else if (entity.entity_type === 'barOrder') loadedBarOrders.push(entity.data);
+                    });
+                    if (loadedTables.length > 0) appState.tables = loadedTables;
+                    if (loadedBarOrders.length > 0) appState.barOrders = loadedBarOrders;
+                } else if (cloudRes.snapshot) { // Fallback al viejo snapshot si no hay entities
+                    const snap = cloudRes.snapshot;
+                    if (snap.tables && snap.tables.length > 0) appState.tables = snap.tables;
+                    if (snap.barOrders && snap.barOrders.length > 0) appState.barOrders = snap.barOrders;
                 }
 
                 // Construir bebidas y pizzas SOLO desde la tabla productos de Neon DB
