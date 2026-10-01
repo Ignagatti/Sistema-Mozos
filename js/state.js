@@ -105,8 +105,11 @@ function getNewOrderObject() {
 let lastSavedTablesStr = "[]";
 let lastSavedBarOrdersStr = "[]";
 
+let isSyncing = false;
+
 // Persistencia: localStorage + archivo local userData + Neon Cloud PostgreSQL DB
 async function saveState() {
+    isSyncing = true;
     const snapshot = {
         tables:          appState.tables,
         barOrders:       appState.barOrders,
@@ -131,15 +134,20 @@ async function saveState() {
         if (currentTablesStr !== lastSavedTablesStr) {
             const currentTables = JSON.parse(currentTablesStr);
             const oldTables = JSON.parse(lastSavedTablesStr);
+            
+            const tablePromises = [];
             currentTables.forEach(t => {
                 const oldT = oldTables.find(o => o.id === t.id);
                 if (!oldT || JSON.stringify(oldT) !== JSON.stringify(t)) {
-                    saveEntity(t, 'table');
+                    tablePromises.push(saveEntity(t, 'table'));
                 }
             });
             oldTables.forEach(o => {
-                if (!currentTables.find(t => t.id === o.id)) deleteEntityFromCloud(o.id);
+                if (!currentTables.find(t => t.id === o.id)) {
+                    tablePromises.push(deleteEntityFromCloud(o.id));
+                }
             });
+            await Promise.all(tablePromises);
             lastSavedTablesStr = currentTablesStr;
         }
 
@@ -148,27 +156,34 @@ async function saveState() {
         if (currentBarStr !== lastSavedBarOrdersStr) {
             const currentBar = JSON.parse(currentBarStr);
             const oldBar = JSON.parse(lastSavedBarOrdersStr);
+            
+            const barPromises = [];
             currentBar.forEach(t => {
                 const oldT = oldBar.find(o => o.id === t.id);
                 if (!oldT || JSON.stringify(oldT) !== JSON.stringify(t)) {
-                    saveEntity(t, 'barOrder');
+                    barPromises.push(saveEntity(t, 'barOrder'));
                 }
             });
             oldBar.forEach(o => {
-                if (!currentBar.find(t => t.id === o.id)) deleteEntityFromCloud(o.id);
+                if (!currentBar.find(t => t.id === o.id)) {
+                    barPromises.push(deleteEntityFromCloud(o.id));
+                }
             });
+            await Promise.all(barPromises);
             lastSavedBarOrdersStr = currentBarStr;
         }
 
         // Snapshot global (modo, mozo, nextTableNumber, etc. SIN tablas para ahorrar DB)
         const globalSnapshot = { ...snapshot, tables: [], barOrders: [] };
         if (typeof window.electronAPI.syncCloudState === 'function') {
-            window.electronAPI.syncCloudState(globalSnapshot).catch(err => console.error('Error sincronizando con Neon DB:', err));
+            await window.electronAPI.syncCloudState(globalSnapshot).catch(err => console.error('Error sincronizando con Neon DB:', err));
         }
     }
+    isSyncing = false;
 }
 
 async function pollCloudState(activeEntityId) {
+    if (isSyncing) return;
     if (typeof window !== 'undefined' && window.electronAPI && typeof window.electronAPI.loadCloudData === 'function') {
         try {
             const cloudRes = await window.electronAPI.loadCloudData();
