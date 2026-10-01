@@ -671,6 +671,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 activeEntity.inUseBy = appState.currentMozo;
                 activeEntity.inUseStart = Date.now();
                 activeEntity.mozo_asignado = appState.currentMozo;
+                saveState(); // Notificar a la nube que la mesa está bloqueada ahora mismo
             }
             modalTitleContainer.innerHTML = `<div class="flex items-center gap-2"><span class="text-2xl font-bold text-gray-800">Mesa</span><input id="modal-table-number-input" type="text" value="${activeEntity.number}" class="text-2xl font-bold p-1 w-20 border rounded-lg text-center"></div>`;
             deleteEntityBtn.textContent = 'Eliminar Mesa';

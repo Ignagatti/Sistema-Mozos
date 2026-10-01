@@ -259,13 +259,13 @@ async function pollCloudState(activeEntityId) {
 
 async function saveEntity(entity, type) {
     if (typeof window !== 'undefined' && window.electronAPI && typeof window.electronAPI.saveCloudEntity === 'function') {
-        window.electronAPI.saveCloudEntity({ entity, type }).catch(err => console.error('Error saving entity:', err));
+        return window.electronAPI.saveCloudEntity({ entity, type }).catch(err => console.error('Error saving entity:', err));
     }
 }
 
 async function deleteEntityFromCloud(id) {
     if (typeof window !== 'undefined' && window.electronAPI && typeof window.electronAPI.deleteCloudEntity === 'function') {
-        window.electronAPI.deleteCloudEntity({ id }).catch(err => console.error('Error deleting entity:', err));
+        return window.electronAPI.deleteCloudEntity({ id }).catch(err => console.error('Error deleting entity:', err));
     }
 }
 
