@@ -187,61 +187,91 @@ async function pollCloudState(activeEntityId) {
     if (typeof window !== 'undefined' && window.electronAPI && typeof window.electronAPI.loadCloudData === 'function') {
         try {
             const cloudRes = await window.electronAPI.loadCloudData();
-            if (cloudRes && cloudRes.success && cloudRes.cloudEntities) {
+            if (cloudRes && cloudRes.success) {
                 let needsRender = false;
-                const loadedTables = [];
-                const loadedBarOrders = [];
-                cloudRes.cloudEntities.forEach(entity => {
-                    if (entity.entity_type === 'table') loadedTables.push(entity.data);
-                    else if (entity.entity_type === 'barOrder') loadedBarOrders.push(entity.data);
-                });
 
-                // Merge Tables
-                loadedTables.forEach(cloudTable => {
-                    const localIdx = appState.tables.findIndex(t => t.id === cloudTable.id);
-                    if (localIdx === -1) {
-                        appState.tables.push(cloudTable);
+                // ── Sync del Snapshot Global (modo, numeroCocina, nextTableNumber, etc.) ──
+                if (cloudRes.snapshot) {
+                    const snap = cloudRes.snapshot;
+                    if (snap.currentMode && snap.currentMode !== appState.currentMode) {
+                        appState.currentMode = snap.currentMode;
                         needsRender = true;
-                    } else {
-                        // Skip if currently being edited
-                        if (activeEntityId === cloudTable.id) return;
-                        if (JSON.stringify(appState.tables[localIdx]) !== JSON.stringify(cloudTable)) {
-                            appState.tables[localIdx] = cloudTable;
-                            needsRender = true;
+                        // Actualizar el selector de modo y la UI asociada
+                        if (typeof window.updateUIMode === 'function') {
+                            window.updateUIMode(snap.currentMode);
                         }
+                        const modeSel = document.getElementById('mode-switcher');
+                        if (modeSel) modeSel.value = snap.currentMode;
                     }
-                });
-                
-                // Remove local tables deleted in cloud
-                for (let i = appState.tables.length - 1; i >= 0; i--) {
-                    const t = appState.tables[i];
-                    if (!loadedTables.find(ct => ct.id === t.id)) {
-                        if (activeEntityId === t.id) continue;
-                        appState.tables.splice(i, 1);
-                        needsRender = true;
+                    if (snap.nextTableNumber && snap.nextTableNumber !== appState.nextTableNumber) {
+                        appState.nextTableNumber = snap.nextTableNumber;
+                    }
+                    if (snap.numeroCocina !== undefined && snap.numeroCocina !== appState.numeroCocina) {
+                        appState.numeroCocina = snap.numeroCocina;
+                        const kitchenInput = document.getElementById('kitchen-number-input');
+                        if (kitchenInput) kitchenInput.value = snap.numeroCocina;
+                    }
+                    if (snap.genericData) {
+                        appState.genericData = Object.assign({}, appState.genericData, snap.genericData);
                     }
                 }
 
-                // Merge Bar Orders (similar logic)
-                loadedBarOrders.forEach(cloudBar => {
-                    const localIdx = appState.barOrders.findIndex(t => t.id === cloudBar.id);
-                    if (localIdx === -1) {
-                        appState.barOrders.push(cloudBar);
-                        needsRender = true;
-                    } else {
-                        if (activeEntityId === cloudBar.id) return;
-                        if (JSON.stringify(appState.barOrders[localIdx]) !== JSON.stringify(cloudBar)) {
-                            appState.barOrders[localIdx] = cloudBar;
+                // ── Sync de Entidades (mesas y pedidos de barra) ──
+                if (cloudRes.cloudEntities) {
+                    const loadedTables = [];
+                    const loadedBarOrders = [];
+                    cloudRes.cloudEntities.forEach(entity => {
+                        if (entity.entity_type === 'table') loadedTables.push(entity.data);
+                        else if (entity.entity_type === 'barOrder') loadedBarOrders.push(entity.data);
+                    });
+
+                    // Merge Tables
+                    loadedTables.forEach(cloudTable => {
+                        const localIdx = appState.tables.findIndex(t => t.id === cloudTable.id);
+                        if (localIdx === -1) {
+                            appState.tables.push(cloudTable);
+                            needsRender = true;
+                        } else {
+                            // Skip if currently being edited
+                            if (activeEntityId === cloudTable.id) return;
+                            if (JSON.stringify(appState.tables[localIdx]) !== JSON.stringify(cloudTable)) {
+                                appState.tables[localIdx] = cloudTable;
+                                needsRender = true;
+                            }
+                        }
+                    });
+                    
+                    // Remove local tables deleted in cloud
+                    for (let i = appState.tables.length - 1; i >= 0; i--) {
+                        const t = appState.tables[i];
+                        if (!loadedTables.find(ct => ct.id === t.id)) {
+                            if (activeEntityId === t.id) continue;
+                            appState.tables.splice(i, 1);
                             needsRender = true;
                         }
                     }
-                });
-                for (let i = appState.barOrders.length - 1; i >= 0; i--) {
-                    const t = appState.barOrders[i];
-                    if (!loadedBarOrders.find(ct => ct.id === t.id)) {
-                        if (activeEntityId === t.id) continue;
-                        appState.barOrders.splice(i, 1);
-                        needsRender = true;
+
+                    // Merge Bar Orders (similar logic)
+                    loadedBarOrders.forEach(cloudBar => {
+                        const localIdx = appState.barOrders.findIndex(t => t.id === cloudBar.id);
+                        if (localIdx === -1) {
+                            appState.barOrders.push(cloudBar);
+                            needsRender = true;
+                        } else {
+                            if (activeEntityId === cloudBar.id) return;
+                            if (JSON.stringify(appState.barOrders[localIdx]) !== JSON.stringify(cloudBar)) {
+                                appState.barOrders[localIdx] = cloudBar;
+                                needsRender = true;
+                            }
+                        }
+                    });
+                    for (let i = appState.barOrders.length - 1; i >= 0; i--) {
+                        const t = appState.barOrders[i];
+                        if (!loadedBarOrders.find(ct => ct.id === t.id)) {
+                            if (activeEntityId === t.id) continue;
+                            appState.barOrders.splice(i, 1);
+                            needsRender = true;
+                        }
                     }
                 }
 

@@ -1798,12 +1798,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     pizzaSizeSelect.dispatchEvent(new Event('change'));
     
     window.renderAll = renderAll;
+    window.updateUIMode = updateUIMode;
     renderAll();
 
-    // Iniciar Polling de la Nube cada 1.5 segundos para que se sienta casi instantáneo
+    // Iniciar Polling de la Nube cada 1 segundo para sincronización casi instantánea entre PCs
     setInterval(() => {
         if (typeof pollCloudState === 'function') {
             pollCloudState(activeEntity ? activeEntity.id : null);
         }
-    }, 1500);
+    }, 1000);
 });
