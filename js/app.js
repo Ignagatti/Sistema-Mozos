@@ -1785,11 +1785,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     // ── INICIALIZACIÓN ────────────────────────────────────────────────────────
     await loadState();
     
-    // Inicializar strings de diff para no resubir todo de entrada
-    if (typeof lastSavedTablesStr !== 'undefined') {
-        lastSavedTablesStr = JSON.stringify(appState.tables);
-        lastSavedBarOrdersStr = JSON.stringify(appState.barOrders);
-    }
+    // NOTA: NO inicializar lastSavedTablesStr/lastSavedBarOrdersStr con el estado actual.
+    // Deben quedar en "[]" (su valor default) para que el primer saveState()
+    // detecte las mesas como "nuevas" y las suba a pos_entities en Neon.
+    // Sin esto, las mesas solo viven en localStorage y nunca llegan a la nube.
 
     modeSwitcher.value        = appState.currentMode;
     if (mozoSwitcher) mozoSwitcher.value = appState.currentMozo || 'Mozo 1';
@@ -1800,6 +1799,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     window.renderAll = renderAll;
     window.updateUIMode = updateUIMode;
     renderAll();
+
+    // Subir estado actual a la nube al arrancar (asegura que pos_entities tenga las mesas)
+    saveState();
 
     // Iniciar Polling de la Nube cada 1 segundo para sincronización casi instantánea entre PCs
     setInterval(() => {
