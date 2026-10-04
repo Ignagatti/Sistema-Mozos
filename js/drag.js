@@ -1,17 +1,30 @@
 function makeDraggable(element, tables, mapaClub, saveStateFn) {
     let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
+    let isDragging = false;
+    let startX = 0, startY = 0;
+
     element.onmousedown = dragMouseDown;
 
     function dragMouseDown(e) {
         if (e.target.classList.contains('resizer')) return;
-        e.preventDefault();
-        pos3 = e.clientX; pos4 = e.clientY;
+        isDragging = false;
+        startX = e.clientX;
+        startY = e.clientY;
+        pos3 = e.clientX;
+        pos4 = e.clientY;
         document.onmouseup   = closeDragElement;
         document.onmousemove = elementDrag;
     }
 
     function elementDrag(e) {
+        const dx = Math.abs(e.clientX - startX);
+        const dy = Math.abs(e.clientY - startY);
+        if (dx > 3 || dy > 3) {
+            isDragging = true;
+        }
+        if (!isDragging) return;
         e.preventDefault();
+
         pos1 = pos3 - e.clientX; pos2 = pos4 - e.clientY;
         pos3 = e.clientX;        pos4 = e.clientY;
         let newTop  = element.offsetTop  - pos2;
@@ -26,11 +39,14 @@ function makeDraggable(element, tables, mapaClub, saveStateFn) {
     function closeDragElement() {
         document.onmouseup   = null;
         document.onmousemove = null;
-        const table = tables.find(t => t.id === element.id);
-        if (table) {
-            table.x = element.offsetLeft;
-            table.y = element.offsetTop;
-            saveStateFn();
+        if (isDragging) {
+            const table = tables.find(t => t.id === element.id);
+            if (table) {
+                table.x = element.offsetLeft;
+                table.y = element.offsetTop;
+                if (typeof saveEntity === 'function') saveEntity(table, 'table');
+                saveStateFn();
+            }
         }
     }
 }
@@ -63,6 +79,7 @@ function makeResizable(element, resizer, tables, saveStateFn, onResizeEndFn) {
             const nh = parseFloat(element.style.height);
             if (!isNaN(nw) && nw > 0) table.width  = nw;
             if (!isNaN(nh) && nh > 0) table.height = nh;
+            if (typeof saveEntity === 'function') saveEntity(table, 'table');
             saveStateFn();
             if (typeof onResizeEndFn === 'function') {
                 onResizeEndFn(table);

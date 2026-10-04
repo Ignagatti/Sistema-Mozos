@@ -87,10 +87,11 @@ const appState = {
     genericData:    Object.assign({}, DEFAULT_GENERIC_DATA),
     prices:         JSON.parse(JSON.stringify(DEFAULT_PRICES)),
     currentMode:    'miercoles',
-    currentMozo:    'Mozo 1',
+    currentMozo:    '',
     numeroCocina:   '',
     nextTableNumber: 1,
-    offlineQueue:   []
+    offlineQueue:   [],
+    mozos:          ['Mozo 1', 'Mozo 2', 'Mozo 3']
 };
 
 function getNewOrderObject() {
@@ -110,76 +111,83 @@ let isSyncing = false;
 // Persistencia: localStorage + archivo local userData + Neon Cloud PostgreSQL DB
 async function saveState() {
     isSyncing = true;
-    const snapshot = {
-        tables:          appState.tables,
-        barOrders:       appState.barOrders,
-        prices:          appState.prices,
-        nextTableNumber: appState.nextTableNumber,
-        currentMode:     appState.currentMode,
-        currentMozo:     appState.currentMozo,
-        numeroCocina:    appState.numeroCocina,
-        genericData:     appState.genericData,
-        offlineQueue:    appState.offlineQueue
-    };
-    const dataStr = JSON.stringify(snapshot);
-    localStorage.setItem('restaurantState', dataStr);
+    try {
+        const snapshot = {
+            tables:          appState.tables,
+            barOrders:       appState.barOrders,
+            prices:          appState.prices,
+            nextTableNumber: appState.nextTableNumber,
+            currentMode:     appState.currentMode,
+            currentMozo:     appState.currentMozo,
+            numeroCocina:    appState.numeroCocina,
+            genericData:     appState.genericData,
+            offlineQueue:    appState.offlineQueue
+        };
+        const dataStr = JSON.stringify(snapshot);
+        localStorage.setItem('restaurantState', dataStr);
 
-    if (typeof window !== 'undefined' && window.electronAPI) {
-        if (typeof window.electronAPI.saveBackup === 'function') {
-            await window.electronAPI.saveBackup(dataStr).catch(err => console.error('Error al guardar backup local:', err));
-        }
+        if (typeof window !== 'undefined' && window.electronAPI) {
+            if (typeof window.electronAPI.saveBackup === 'function') {
+                await window.electronAPI.saveBackup(dataStr).catch(err => console.error('Error al guardar backup local:', err));
+            }
 
-        // Differencial de Mesas
-        const currentTablesStr = JSON.stringify(appState.tables);
-        if (currentTablesStr !== lastSavedTablesStr) {
-            const currentTables = JSON.parse(currentTablesStr);
-            const oldTables = JSON.parse(lastSavedTablesStr);
-            
-            const tablePromises = [];
-            currentTables.forEach(t => {
-                const oldT = oldTables.find(o => o.id === t.id);
-                if (!oldT || JSON.stringify(oldT) !== JSON.stringify(t)) {
-                    tablePromises.push(saveEntity(t, 'table'));
-                }
-            });
-            oldTables.forEach(o => {
-                if (!currentTables.find(t => t.id === o.id)) {
-                    tablePromises.push(deleteEntityFromCloud(o.id));
-                }
-            });
-            await Promise.all(tablePromises);
-            lastSavedTablesStr = currentTablesStr;
-        }
+            // Differencial de Mesas
+            const currentTablesStr = JSON.stringify(appState.tables);
+            if (currentTablesStr !== lastSavedTablesStr) {
+                const currentTables = JSON.parse(currentTablesStr);
+                let oldTables = [];
+                try { oldTables = JSON.parse(lastSavedTablesStr); } catch (e) { oldTables = []; }
+                
+                const tablePromises = [];
+                currentTables.forEach(t => {
+                    const oldT = oldTables.find(o => o.id === t.id);
+                    if (!oldT || JSON.stringify(oldT) !== JSON.stringify(t)) {
+                        tablePromises.push(saveEntity(t, 'table'));
+                    }
+                });
+                oldTables.forEach(o => {
+                    if (!currentTables.find(t => t.id === o.id)) {
+                        tablePromises.push(deleteEntityFromCloud(o.id));
+                    }
+                });
+                await Promise.all(tablePromises).catch(err => console.error('Error guardando mesas:', err));
+                lastSavedTablesStr = currentTablesStr;
+            }
 
-        // Differencial de Barra
-        const currentBarStr = JSON.stringify(appState.barOrders);
-        if (currentBarStr !== lastSavedBarOrdersStr) {
-            const currentBar = JSON.parse(currentBarStr);
-            const oldBar = JSON.parse(lastSavedBarOrdersStr);
-            
-            const barPromises = [];
-            currentBar.forEach(t => {
-                const oldT = oldBar.find(o => o.id === t.id);
-                if (!oldT || JSON.stringify(oldT) !== JSON.stringify(t)) {
-                    barPromises.push(saveEntity(t, 'barOrder'));
-                }
-            });
-            oldBar.forEach(o => {
-                if (!currentBar.find(t => t.id === o.id)) {
-                    barPromises.push(deleteEntityFromCloud(o.id));
-                }
-            });
-            await Promise.all(barPromises);
-            lastSavedBarOrdersStr = currentBarStr;
-        }
+            // Differencial de Barra
+            const currentBarStr = JSON.stringify(appState.barOrders);
+            if (currentBarStr !== lastSavedBarOrdersStr) {
+                const currentBar = JSON.parse(currentBarStr);
+                let oldBar = [];
+                try { oldBar = JSON.parse(lastSavedBarOrdersStr); } catch (e) { oldBar = []; }
+                
+                const barPromises = [];
+                currentBar.forEach(t => {
+                    const oldT = oldBar.find(o => o.id === t.id);
+                    if (!oldT || JSON.stringify(oldT) !== JSON.stringify(t)) {
+                        barPromises.push(saveEntity(t, 'barOrder'));
+                    }
+                });
+                oldBar.forEach(o => {
+                    if (!currentBar.find(t => t.id === o.id)) {
+                        barPromises.push(deleteEntityFromCloud(o.id));
+                    }
+                });
+                await Promise.all(barPromises).catch(err => console.error('Error guardando barra:', err));
+                lastSavedBarOrdersStr = currentBarStr;
+            }
 
-        // Snapshot global (modo, mozo, nextTableNumber, etc. SIN tablas para ahorrar DB)
-        const globalSnapshot = { ...snapshot, tables: [], barOrders: [] };
-        if (typeof window.electronAPI.syncCloudState === 'function') {
-            await window.electronAPI.syncCloudState(globalSnapshot).catch(err => console.error('Error sincronizando con Neon DB:', err));
+            // Snapshot global (modo, mozo, nextTableNumber, etc. SIN tablas para ahorrar DB)
+            const globalSnapshot = { ...snapshot, tables: [], barOrders: [] };
+            if (typeof window.electronAPI.syncCloudState === 'function') {
+                await window.electronAPI.syncCloudState(globalSnapshot).catch(err => console.error('Error sincronizando con Neon DB:', err));
+            }
         }
+    } catch (e) {
+        console.error('Error en saveState:', e);
+    } finally {
+        isSyncing = false;
     }
-    isSyncing = false;
 }
 
 async function pollCloudState(activeEntityId) {
@@ -187,10 +195,8 @@ async function pollCloudState(activeEntityId) {
     if (typeof window !== 'undefined' && window.electronAPI && typeof window.electronAPI.loadCloudData === 'function') {
         try {
             const cloudRes = await window.electronAPI.loadCloudData();
-            // Verificar isSyncing de nuevo después de la llamada de red, para evitar
-            // que un save local que empezó durante el fetch pise los datos
             if (isSyncing) return;
-            if (cloudRes && cloudRes.success && cloudRes.cloudEntities) {
+            if (cloudRes && cloudRes.success && cloudRes.cloudEntities && Array.isArray(cloudRes.cloudEntities)) {
                 let needsRender = false;
                 const loadedTables = [];
                 const loadedBarOrders = [];
@@ -199,15 +205,25 @@ async function pollCloudState(activeEntityId) {
                     else if (entity.entity_type === 'barOrder') loadedBarOrders.push(entity.data);
                 });
 
-                // Merge Tables
+                // 1. Merge Tables
                 loadedTables.forEach(cloudTable => {
                     const localIdx = appState.tables.findIndex(t => t.id === cloudTable.id);
                     if (localIdx === -1) {
+                        if (cloudTable.inUseBy) cloudTable.inUseStart = Date.now();
                         appState.tables.push(cloudTable);
                         needsRender = true;
                     } else {
-                        // Skip if currently being edited
                         if (activeEntityId === cloudTable.id) return;
+                        
+                        // Preserve or set local inUseStart since it doesn't come from the DB
+                        if (cloudTable.inUseBy) {
+                            if (cloudTable.inUseBy === appState.tables[localIdx].inUseBy) {
+                                cloudTable.inUseStart = appState.tables[localIdx].inUseStart || Date.now();
+                            } else {
+                                cloudTable.inUseStart = Date.now();
+                            }
+                        }
+
                         if (JSON.stringify(appState.tables[localIdx]) !== JSON.stringify(cloudTable)) {
                             appState.tables[localIdx] = cloudTable;
                             needsRender = true;
@@ -215,47 +231,66 @@ async function pollCloudState(activeEntityId) {
                     }
                 });
                 
-                // Remove local tables deleted in cloud
-                // Solo borrar si la nube tiene al menos 1 mesa (protección contra lag de red)
-                if (loadedTables.length > 0) {
-                    for (let i = appState.tables.length - 1; i >= 0; i--) {
-                        const t = appState.tables[i];
-                        if (!loadedTables.find(ct => ct.id === t.id)) {
-                            if (activeEntityId === t.id) continue;
-                            appState.tables.splice(i, 1);
-                            needsRender = true;
-                        }
+                // 2. Remove local tables deleted in cloud
+                for (let i = appState.tables.length - 1; i >= 0; i--) {
+                    const t = appState.tables[i];
+                    if (!loadedTables.find(ct => ct.id === t.id)) {
+                        if (activeEntityId === t.id) continue;
+                        appState.tables.splice(i, 1);
+                        needsRender = true;
                     }
                 }
 
-                // Merge Bar Orders (similar logic)
+                // 3. Merge Bar Orders
                 loadedBarOrders.forEach(cloudBar => {
                     const localIdx = appState.barOrders.findIndex(t => t.id === cloudBar.id);
                     if (localIdx === -1) {
+                        if (cloudBar.inUseBy) cloudBar.inUseStart = Date.now();
                         appState.barOrders.push(cloudBar);
                         needsRender = true;
                     } else {
                         if (activeEntityId === cloudBar.id) return;
+                        
+                        // Preserve or set local inUseStart since it doesn't come from the DB
+                        if (cloudBar.inUseBy) {
+                            if (cloudBar.inUseBy === appState.barOrders[localIdx].inUseBy) {
+                                cloudBar.inUseStart = appState.barOrders[localIdx].inUseStart || Date.now();
+                            } else {
+                                cloudBar.inUseStart = Date.now();
+                            }
+                        }
+
                         if (JSON.stringify(appState.barOrders[localIdx]) !== JSON.stringify(cloudBar)) {
                             appState.barOrders[localIdx] = cloudBar;
                             needsRender = true;
                         }
                     }
                 });
-                if (loadedBarOrders.length > 0) {
-                    for (let i = appState.barOrders.length - 1; i >= 0; i--) {
-                        const t = appState.barOrders[i];
-                        if (!loadedBarOrders.find(ct => ct.id === t.id)) {
-                            if (activeEntityId === t.id) continue;
-                            appState.barOrders.splice(i, 1);
-                            needsRender = true;
-                        }
+
+                // 4. Remove local bar orders deleted in cloud
+                for (let i = appState.barOrders.length - 1; i >= 0; i--) {
+                    const t = appState.barOrders[i];
+                    if (!loadedBarOrders.find(ct => ct.id === t.id)) {
+                        if (activeEntityId === t.id) continue;
+                        appState.barOrders.splice(i, 1);
+                        needsRender = true;
                     }
                 }
 
                 if (needsRender) {
                     lastSavedTablesStr = JSON.stringify(appState.tables);
                     lastSavedBarOrdersStr = JSON.stringify(appState.barOrders);
+                    localStorage.setItem('restaurantState', JSON.stringify({
+                        tables: appState.tables,
+                        barOrders: appState.barOrders,
+                        prices: appState.prices,
+                        nextTableNumber: appState.nextTableNumber,
+                        currentMode: appState.currentMode,
+                        currentMozo: appState.currentMozo,
+                        numeroCocina: appState.numeroCocina,
+                        genericData: appState.genericData,
+                        offlineQueue: appState.offlineQueue
+                    }));
                     if (typeof window.renderAll === 'function') window.renderAll();
                 }
             }
@@ -356,7 +391,7 @@ async function loadState() {
                     if (snap.genericData) appState.genericData = Object.assign({}, DEFAULT_GENERIC_DATA, snap.genericData);
                 }
                 
-                // Cargar mesas y barra desde pos_entities
+                // Cargar mesas y barra desde pos_entities (fuente única de verdad)
                 if (cloudRes.cloudEntities && Array.isArray(cloudRes.cloudEntities)) {
                     const loadedTables = [];
                     const loadedBarOrders = [];
@@ -364,9 +399,15 @@ async function loadState() {
                         if (entity.entity_type === 'table') loadedTables.push(entity.data);
                         else if (entity.entity_type === 'barOrder') loadedBarOrders.push(entity.data);
                     });
-                    if (loadedTables.length > 0) appState.tables = loadedTables;
-                    if (loadedBarOrders.length > 0) appState.barOrders = loadedBarOrders;
-                } else if (cloudRes.snapshot) { // Fallback al viejo snapshot si no hay entities
+                    if (loadedTables.length > 0 || loadedBarOrders.length > 0) {
+                        appState.tables = loadedTables;
+                        appState.barOrders = loadedBarOrders;
+                    } else if (appState.tables.length > 0 || appState.barOrders.length > 0) {
+                        // Si la nube estaba vacía pero hay datos locales, subirlos inmediatamente
+                        appState.tables.forEach(t => saveEntity(t, 'table'));
+                        appState.barOrders.forEach(b => saveEntity(b, 'barOrder'));
+                    }
+                } else if (cloudRes.snapshot) {
                     const snap = cloudRes.snapshot;
                     if (snap.tables && snap.tables.length > 0) appState.tables = snap.tables;
                     if (snap.barOrders && snap.barOrders.length > 0) appState.barOrders = snap.barOrders;
@@ -428,6 +469,7 @@ async function loadState() {
                         appState.prices.preciosPizzas = dbPizzas;
                     }
                 }
+
             }
         } catch (err) {
             console.error('Error sincronizando con Neon DB en la nube:', err);

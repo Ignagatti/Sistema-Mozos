@@ -5,6 +5,7 @@
   "main": "main.js",
   "scripts": {
     "start": "electron .",
+    "start:mozo2": "electron . --user-data-dir=scratch/mozo2",
     "build": "electron-builder --win nsis",
     "test": "node tests/calculations.test.js && node tests/sales-report.test.js && node tests/edge-cases-and-stress.test.js"
   },
@@ -35,8 +36,10 @@
     ]
   },
   "devDependencies": {
+    "@playwright/test": "^1.63.0",
     "electron": "^31.0.0",
-    "electron-builder": "^24.0.0"
+    "electron-builder": "^24.0.0",
+    "playwright": "^1.63.0"
   },
   "dependencies": {
     "dotenv": "^18.0.5",

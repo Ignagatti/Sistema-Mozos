@@ -122,192 +122,226 @@ app.whenReady().then(() => {
   });
 
 require('dotenv').config();
+const { Pool } = require('pg');
 const NEON_CONN_STRING = process.env.DATABASE_URL || process.env.NEON_DATABASE_URL || 'postgresql://neondb_owner:npg_DlXN1qQac5bF@ep-royal-breeze-b5v5b7vx-pooler.c-7.us-east-2.aws.neon.tech/neondb?sslmode=verify-full';
 
-  // Maneja la carga de datos desde Neon Cloud DB
-  ipcMain.handle('load-cloud-data', async () => {
-    const { Client } = require('pg');
-    const client = new Client({ connectionString: NEON_CONN_STRING });
-    try {
-      await client.connect();
-      const snapshotRes = await client.query("SELECT snapshot_data FROM app_state_snapshots WHERE id = 'current' LIMIT 1;");
-      const snapshot = snapshotRes.rows.length > 0 ? snapshotRes.rows[0].snapshot_data : null;
+const dbPool = new Pool({
+  connectionString: NEON_CONN_STRING,
+  max: 15,
+  idleTimeoutMillis: 30000,
+  connectionTimeoutMillis: 5000
+});
 
-      const prodsRes = await client.query("SELECT nombre, categoria, precio FROM productos WHERE activo = true;");
-      const dbProducts = prodsRes.rows;
+// Maneja la carga de datos desde Neon Cloud DB
+ipcMain.handle('load-cloud-data', async () => {
+  try {
+    const snapshotRes = await dbPool.query("SELECT snapshot_data FROM app_state_snapshots WHERE id = 'current' LIMIT 1;");
+    const snapshot = snapshotRes.rows.length > 0 ? snapshotRes.rows[0].snapshot_data : null;
 
-      const entitiesRes = await client.query("SELECT id, entity_type, data FROM pos_entities;");
-      const cloudEntities = entitiesRes.rows;
+    const prodsRes = await dbPool.query("SELECT nombre, categoria, precio FROM productos WHERE activo = true;");
+    const dbProducts = prodsRes.rows;
 
-      return { success: true, snapshot, dbProducts, cloudEntities };
-    } catch (err) {
-      console.error('Error cargando datos de Neon DB:', err);
-      return { success: false, error: err.message };
-    } finally {
-      await client.end().catch(() => {});
-    }
-  });
 
-  // Maneja la sincronización de estado completo a Neon Cloud DB
-  // NOTA: NO tocamos la tabla productos aquí. Los productos se manejan
-  // individualmente con update-product-price y delete-product para evitar
-  // que un producto borrado reaparezca al sincronizar.
-  ipcMain.handle('sync-cloud-state', async (event, snapshot) => {
-    if (!snapshot) return { success: false, error: 'No snapshot provided' };
-    const { Client } = require('pg');
-    const client = new Client({ connectionString: NEON_CONN_STRING });
-    try {
-      await client.connect();
-      const snapshotJson = JSON.stringify(snapshot);
 
-      // 1. Guardar/Actualizar snapshot global en app_state_snapshots
-      await client.query(
-        `INSERT INTO app_state_snapshots (id, snapshot_data, version, device_id, updated_at)
-         VALUES ('current', $1, 1, 'pos-main', CURRENT_TIMESTAMP)
-         ON CONFLICT (id) DO UPDATE SET snapshot_data = EXCLUDED.snapshot_data, updated_at = CURRENT_TIMESTAMP;`,
-        [snapshotJson]
+    const mesasRes = await dbPool.query("SELECT * FROM mesas;");
+    const pedidosRes = await dbPool.query("SELECT * FROM pedidos_barra;");
+    
+    const cloudEntities = [];
+    mesasRes.rows.forEach(r => {
+      const entityData = {
+          id: r.id,
+          number: r.table_number ? r.table_number.toString() : (r.custom_name || ''),
+          custom_name: r.custom_name,
+          x: r.x, y: r.y, width: r.width, height: r.height,
+          order: r.order_data || {},
+          isPaid: r.is_paid || false,
+          paidAmount: Number(r.paid_amount) || 0,
+          tipAmount: Number(r.tip_amount) || 0,
+          inUseBy: r.device_id || null
+      };
+      cloudEntities.push({ id: r.id, entity_type: 'table', data: entityData });
+    });
+
+    pedidosRes.rows.forEach(r => {
+      const entityData = {
+          id: r.id,
+          clientName: r.client_name,
+          order: r.order_data || {},
+          isPaid: r.is_paid || false,
+          paidAmount: Number(r.paid_amount) || 0,
+          tipAmount: Number(r.tip_amount) || 0,
+          inUseBy: r.device_id || null
+      };
+      cloudEntities.push({ id: r.id, entity_type: 'barOrder', data: entityData });
+    });
+
+    return { success: true, snapshot, dbProducts, cloudEntities };
+  } catch (err) {
+    console.error('Error cargando datos de Neon DB:', err);
+    return { success: false, error: err.message };
+  }
+});
+
+// Maneja la sincronización de estado completo a Neon Cloud DB
+ipcMain.handle('sync-cloud-state', async (event, snapshot) => {
+  if (!snapshot) return { success: false, error: 'No snapshot provided' };
+  try {
+    const snapshotJson = JSON.stringify(snapshot);
+
+    // 1. Guardar/Actualizar snapshot global en app_state_snapshots
+    await dbPool.query(
+      `INSERT INTO app_state_snapshots (id, snapshot_data, version, device_id, updated_at)
+       VALUES ('current', $1, 1, 'pos-main', CURRENT_TIMESTAMP)
+       ON CONFLICT (id) DO UPDATE SET snapshot_data = EXCLUDED.snapshot_data, updated_at = CURRENT_TIMESTAMP;`,
+      [snapshotJson]
+    );
+
+    // 2. Guardar precios globales en restaurant_prices
+    if (snapshot.prices) {
+      await dbPool.query(
+        `INSERT INTO restaurant_prices (id, prices_data, device_id, updated_at)
+         VALUES ('default', $1, 'pos-main', CURRENT_TIMESTAMP)
+         ON CONFLICT (id) DO UPDATE SET prices_data = EXCLUDED.prices_data, updated_at = CURRENT_TIMESTAMP;`,
+        [JSON.stringify(snapshot.prices)]
       );
-
-      // 2. Guardar precios globales en restaurant_prices
-      if (snapshot.prices) {
-        await client.query(
-          `INSERT INTO restaurant_prices (id, prices_data, device_id, updated_at)
-           VALUES ('default', $1, 'pos-main', CURRENT_TIMESTAMP)
-           ON CONFLICT (id) DO UPDATE SET prices_data = EXCLUDED.prices_data, updated_at = CURRENT_TIMESTAMP;`,
-          [JSON.stringify(snapshot.prices)]
-        );
-      }
-
-      return { success: true };
-    } catch (err) {
-      console.error('Error sincronizando estado en Neon DB:', err);
-      return { success: false, error: err.message };
-    } finally {
-      await client.end().catch(() => {});
     }
-  });
 
+    return { success: true };
+  } catch (err) {
+    console.error('Error sincronizando estado en Neon DB:', err);
+    return { success: false, error: err.message };
+  }
+});
 
-  // Maneja la actualización de precio o creación de producto en Neon PostgreSQL
-  ipcMain.handle('update-product-price', async (event, { productName, newPrice, category }) => {
-    if (!productName) return { success: false, error: 'Product name required' };
-    const { Client } = require('pg');
-    const client = new Client({ connectionString: NEON_CONN_STRING });
-    try {
-      await client.connect();
-      const catName = category || 'Bebidas';
-      const pPrice = Number(newPrice) || 0;
+// Maneja la actualización de precio o creación de producto en Neon PostgreSQL
+ipcMain.handle('update-product-price', async (event, { productName, newPrice, category }) => {
+  if (!productName) return { success: false, error: 'Product name required' };
+  try {
+    const catName = category || 'Bebidas';
+    const pPrice = Number(newPrice) || 0;
 
-      await client.query(
-        `INSERT INTO productos (nombre, categoria, precio, stock_actual, activo)
-         VALUES ($1, $2, $3, 100, true)
-         ON CONFLICT (LOWER(nombre)) DO UPDATE SET precio = EXCLUDED.precio, categoria = EXCLUDED.categoria, activo = true;`,
-        [productName.trim(), catName, pPrice]
+    await dbPool.query(
+      `INSERT INTO productos (nombre, categoria, precio, stock_actual, activo)
+       VALUES ($1, $2, $3, 100, true)
+       ON CONFLICT (LOWER(nombre)) DO UPDATE SET precio = EXCLUDED.precio, categoria = EXCLUDED.categoria, activo = true;`,
+      [productName.trim(), catName, pPrice]
+    );
+    return { success: true };
+  } catch (err) {
+    console.error('Error actualizando precio en Neon DB:', err);
+    return { success: false, error: err.message };
+  }
+});
+
+// Maneja la eliminación de un producto en Neon PostgreSQL DB
+ipcMain.handle('delete-product', async (event, { productName }) => {
+  if (!productName) return { success: false, error: 'Product name required' };
+  try {
+    const pName = productName.trim();
+    const cleanPizzaName = pName.toLowerCase().startsWith('pizza ') ? pName : `Pizza ${pName}`;
+
+    const res = await dbPool.query(
+      'DELETE FROM productos WHERE LOWER(nombre) = LOWER($1) OR LOWER(nombre) = LOWER($2);',
+      [pName, cleanPizzaName]
+    );
+    console.log(`Producto '${pName}' eliminado de Neon DB (Filas afectadas: ${res.rowCount})`);
+    return { success: true, count: res.rowCount };
+  } catch (err) {
+    console.error('Error eliminando producto de Neon DB:', err);
+    return { success: false, error: err.message };
+  }
+});
+
+// Maneja el Cierre de Caja General y cambio de jornada global en Neon DB
+ipcMain.handle('close-global-shift', async () => {
+  try {
+    await dbPool.query(
+      "UPDATE mesas_activas SET estado = 'cerrada', mozo_asignado = NULL, ultima_actualizacion = CURRENT_TIMESTAMP;"
+    );
+    return { success: true };
+  } catch (err) {
+    console.error('Error cerrando jornada global en Neon DB:', err);
+    return { success: false, error: err.message };
+  }
+});
+
+ipcMain.handle('save-cloud-entity', async (event, { entity, type }) => {
+  if (!entity || !entity.id || !type) return { success: false, error: 'Invalid entity data' };
+  try {
+    if (type === 'table') {
+      await dbPool.query(
+        `INSERT INTO mesas (id, table_number, custom_name, x, y, width, height, order_data, is_paid, paid_amount, tip_amount, device_id, updated_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, CURRENT_TIMESTAMP)
+         ON CONFLICT (id) DO UPDATE SET 
+            table_number = EXCLUDED.table_number, custom_name = EXCLUDED.custom_name,
+            x = EXCLUDED.x, y = EXCLUDED.y, width = EXCLUDED.width, height = EXCLUDED.height,
+            order_data = EXCLUDED.order_data, is_paid = EXCLUDED.is_paid, 
+            paid_amount = EXCLUDED.paid_amount, tip_amount = EXCLUDED.tip_amount, 
+            device_id = EXCLUDED.device_id, updated_at = CURRENT_TIMESTAMP;`,
+        [
+          entity.id, 
+          parseInt(entity.number) || null, 
+          entity.number || '', 
+          entity.x || 50, entity.y || 50, entity.width || 100, entity.height || 100,
+          JSON.stringify(entity.order || {}),
+          entity.isPaid || false,
+          entity.paidAmount || 0,
+          entity.tipAmount || 0,
+          entity.inUseBy || null
+        ]
       );
-      return { success: true };
-    } catch (err) {
-      console.error('Error actualizando precio en Neon DB:', err);
-      return { success: false, error: err.message };
-    } finally {
-      await client.end().catch(() => {});
-    }
-  });
-
-  // Maneja la eliminación de un producto en Neon PostgreSQL DB
-  ipcMain.handle('delete-product', async (event, { productName }) => {
-    if (!productName) return { success: false, error: 'Product name required' };
-    const { Client } = require('pg');
-    const client = new Client({ connectionString: NEON_CONN_STRING });
-    try {
-      await client.connect();
-      const pName = productName.trim();
-      // Borrar por nombre exacto y también con prefijo "Pizza " para gustos de pizza
-      const cleanPizzaName = pName.toLowerCase().startsWith('pizza ') ? pName : `Pizza ${pName}`;
-
-      const res = await client.query(
-        'DELETE FROM productos WHERE LOWER(nombre) = LOWER($1) OR LOWER(nombre) = LOWER($2);',
-        [pName, cleanPizzaName]
+    } else if (type === 'barOrder') {
+      await dbPool.query(
+        `INSERT INTO pedidos_barra (id, client_name, order_data, is_paid, paid_amount, tip_amount, device_id, updated_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, CURRENT_TIMESTAMP)
+         ON CONFLICT (id) DO UPDATE SET 
+            client_name = EXCLUDED.client_name, order_data = EXCLUDED.order_data, 
+            is_paid = EXCLUDED.is_paid, paid_amount = EXCLUDED.paid_amount, 
+            tip_amount = EXCLUDED.tip_amount, device_id = EXCLUDED.device_id, 
+            updated_at = CURRENT_TIMESTAMP;`,
+        [
+          entity.id, 
+          entity.clientName || '', 
+          JSON.stringify(entity.order || {}),
+          entity.isPaid || false,
+          entity.paidAmount || 0,
+          entity.tipAmount || 0,
+          entity.inUseBy || null
+        ]
       );
-      console.log(`Producto '${pName}' eliminado de Neon DB (Filas afectadas: ${res.rowCount})`);
-      return { success: true, count: res.rowCount };
-    } catch (err) {
-      console.error('Error eliminando producto de Neon DB:', err);
-      return { success: false, error: err.message };
-    } finally {
-      await client.end().catch(() => {});
     }
-  });
+    return { success: true };
+  } catch (err) {
+    console.error('Error saving entity in Neon DB:', err);
+    return { success: false, error: err.message };
+  }
+});
 
-
-  // Maneja el Cierre de Caja General y cambio de jornada global en Neon DB
-  ipcMain.handle('close-global-shift', async () => {
-    const { Client } = require('pg');
-    const client = new Client({ connectionString: NEON_CONN_STRING });
-    try {
-      await client.connect();
-      await client.query(
-        "UPDATE mesas_activas SET estado = 'cerrada', mozo_asignado = NULL, ultima_actualizacion = CURRENT_TIMESTAMP;"
-      );
-      return { success: true };
-    } catch (err) {
-      console.error('Error cerrando jornada global en Neon DB:', err);
-      return { success: false, error: err.message };
-    } finally {
-      await client.end().catch(() => {});
+ipcMain.handle('delete-cloud-entity', async (event, { id }) => {
+  if (!id) return { success: false, error: 'Entity id required' };
+  try {
+    if (id.startsWith('table')) {
+      await dbPool.query('DELETE FROM mesas WHERE id = $1;', [id]);
+    } else {
+      await dbPool.query('DELETE FROM pedidos_barra WHERE id = $1;', [id]);
     }
-  });
+    return { success: true };
+  } catch (err) {
+    console.error('Error deleting entity from Neon DB:', err);
+    return { success: false, error: err.message };
+  }
+});
 
-  ipcMain.handle('save-cloud-entity', async (event, { entity, type }) => {
-    if (!entity || !entity.id || !type) return { success: false, error: 'Invalid entity data' };
-    const { Client } = require('pg');
-    const client = new Client({ connectionString: NEON_CONN_STRING });
-    try {
-      await client.connect();
-      await client.query(
-        `INSERT INTO pos_entities (id, entity_type, data, updated_at)
-         VALUES ($1, $2, $3, CURRENT_TIMESTAMP)
-         ON CONFLICT (id) DO UPDATE SET data = EXCLUDED.data, entity_type = EXCLUDED.entity_type, updated_at = CURRENT_TIMESTAMP;`,
-        [entity.id, type, JSON.stringify(entity)]
-      );
-      return { success: true };
-    } catch (err) {
-      console.error('Error saving entity in Neon DB:', err);
-      return { success: false, error: err.message };
-    } finally {
-      await client.end().catch(() => {});
-    }
-  });
-
-  ipcMain.handle('delete-cloud-entity', async (event, { id }) => {
-    if (!id) return { success: false, error: 'Entity id required' };
-    const { Client } = require('pg');
-    const client = new Client({ connectionString: NEON_CONN_STRING });
-    try {
-      await client.connect();
-      await client.query('DELETE FROM pos_entities WHERE id = $1;', [id]);
-      return { success: true };
-    } catch (err) {
-      console.error('Error deleting entity from Neon DB:', err);
-      return { success: false, error: err.message };
-    } finally {
-      await client.end().catch(() => {});
-    }
-  });
-
-  ipcMain.handle('clear-all-entities', async () => {
-    const { Client } = require('pg');
-    const client = new Client({ connectionString: NEON_CONN_STRING });
-    try {
-      await client.connect();
-      await client.query('TRUNCATE TABLE pos_entities;');
-      return { success: true };
-    } catch (err) {
-      console.error('Error clearing entities in Neon DB:', err);
-      return { success: false, error: err.message };
-    } finally {
-      await client.end().catch(() => {});
-    }
-  });
+ipcMain.handle('clear-all-entities', async () => {
+  try {
+    await dbPool.query('TRUNCATE TABLE mesas;');
+    await dbPool.query('TRUNCATE TABLE pedidos_barra;');
+    return { success: true };
+  } catch (err) {
+    console.error('Error clearing entities in Neon DB:', err);
+    return { success: false, error: err.message };
+  }
+});
 
   createWindow();
 });

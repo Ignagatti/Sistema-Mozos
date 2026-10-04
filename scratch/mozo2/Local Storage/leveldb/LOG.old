@@ -1,0 +1,6 @@
+2026/10/04-18:35:27.346 53a8 Reusing MANIFEST C:\Users\Usuario\Documents\GitHub\Sistema-Mozos\scratch\mozo2\Local Storage\leveldb/MANIFEST-000001
+2026/10/04-18:35:27.353 53a8 Recovering log #3
+2026/10/04-18:35:27.354 53a8 Reusing old log C:\Users\Usuario\Documents\GitHub\Sistema-Mozos\scratch\mozo2\Local Storage\leveldb/000003.log 
+2026/10/04-18:36:28.084 3724 Level-0 table #5: started
+2026/10/04-18:36:28.087 3724 Level-0 table #5: 20575 bytes OK
+2026/10/04-18:36:28.090 3724 Delete type=0 #3

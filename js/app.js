@@ -117,6 +117,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const addBarOrderBtn     = document.getElementById('add-bar-order-btn');
     const barOrdersList      = document.getElementById('bar-orders-list');
 
+
     // Password
     const passwordTitle       = document.getElementById('password-title');
     const passwordDescription = document.getElementById('password-description');
@@ -236,7 +237,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // REGLA 2: Bloqueo Dinámico de Concurrencia (En uso mientras está abierta)
     function isTableInUseByOther(table) {
         const target = table || activeEntity;
-        if (!target || !target.id || !target.id.startsWith('table-')) return false;
+        if (!target || !target.id) return false;
         if (!target.inUseBy) return false;
         if (target.inUseBy === appState.currentMozo) return false;
         // Timeout de seguridad de 5 minutos (300.000 ms) en caso de desconexión sin cerrar modal
@@ -245,7 +246,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     function updateModalLockState() {
-        if (!activeEntity || !activeEntity.id.startsWith('table-')) {
+        if (!activeEntity) {
             if (mozoLockBanner) mozoLockBanner.classList.add('hidden');
             setModalInputsDisabled(false);
             return;
@@ -255,7 +256,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (locked) {
             if (mozoLockBanner) mozoLockBanner.classList.remove('hidden');
             if (mozoLockMessage) {
-                mozoLockMessage.textContent = `Mesa en uso: "${activeEntity.inUseBy}" la está editando en este instante.`;
+                mozoLockMessage.textContent = `Pedido en uso: "${activeEntity.inUseBy}" lo está editando en este instante.`;
             }
             setModalInputsDisabled(true);
         } else {
@@ -275,33 +276,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (numInput) numInput.disabled = disabled;
     }
 
-    // REGLA 3: Alerta Naranja de Duplicado Cercano (< 60 Segundos)
+    // Sin validación molesta de 60 segundos: agregar directamente los ítems solicitados
     function checkDuplicateAndAdd(productName, onConfirm) {
-        if (!activeEntity) { onConfirm(); return; }
-
-        if (!activeEntity.recentAdditions) activeEntity.recentAdditions = [];
-        const now = Date.now();
-        // Filtrar productos agregados hace más de 60 segundos
-        activeEntity.recentAdditions = activeEntity.recentAdditions.filter(item => (now - item.timestamp) < 60000);
-
-        const exists = activeEntity.recentAdditions.find(item => item.productName === productName);
-
-        if (exists) {
-            const tableLabel = activeEntity.id.startsWith('table-') ? `la Mesa ${activeEntity.number}` : `el pedido de ${activeEntity.clientName}`;
-            if (duplicateWarningMessage) {
-                duplicateWarningMessage.innerHTML = `El producto <strong>"${escapeHtml(productName)}"</strong> fue agregado a ${escapeHtml(tableLabel)} hace menos de 60 segundos.`;
-            }
-            pendingDuplicateAction = () => {
-                activeEntity.recentAdditions.push({ productName, timestamp: Date.now() });
-                recordOfflineAction(activeEntity.number || activeEntity.id, productName, 1);
-                onConfirm();
-            };
-            if (duplicateWarningModal) duplicateWarningModal.style.display = 'flex';
-        } else {
-            activeEntity.recentAdditions.push({ productName, timestamp: Date.now() });
-            recordOfflineAction(activeEntity.number || activeEntity.id, productName, 1);
-            onConfirm();
-        }
+        if (typeof onConfirm === 'function') onConfirm();
     }
 
 
@@ -671,12 +648,24 @@ document.addEventListener('DOMContentLoaded', async () => {
                 activeEntity.inUseBy = appState.currentMozo;
                 activeEntity.inUseStart = Date.now();
                 activeEntity.mozo_asignado = appState.currentMozo;
-                saveState(); // Notificar a la nube que la mesa está bloqueada ahora mismo
+                if (typeof saveEntity === 'function') saveEntity(activeEntity, 'table');
+                saveState();
             }
             modalTitleContainer.innerHTML = `<div class="flex items-center gap-2"><span class="text-2xl font-bold text-gray-800">Mesa</span><input id="modal-table-number-input" type="text" value="${activeEntity.number}" class="text-2xl font-bold p-1 w-20 border rounded-lg text-center"></div>`;
             deleteEntityBtn.textContent = 'Eliminar Mesa';
         } else {
-            activeEntity = appState.barOrders.find(o => o.id === id);
+            const target = appState.barOrders.find(o => o.id === id);
+            if (target && isTableInUseByOther(target)) {
+                showSystemAlert(`Pedido en uso: "${target.inUseBy}" está editando el pedido de ${target.clientName} en este instante. Por favor intenta en unos segundos.`, 'Pedido en Uso');
+                return;
+            }
+            activeEntity = target;
+            if (activeEntity) {
+                activeEntity.inUseBy = appState.currentMozo;
+                activeEntity.inUseStart = Date.now();
+                if (typeof saveEntity === 'function') saveEntity(activeEntity, 'barOrder');
+                saveState();
+            }
             modalTitleContainer.innerHTML = `<h2 class="text-2xl font-bold">Pedido de ${activeEntity.clientName}</h2>`;
             deleteEntityBtn.textContent = 'Eliminar Pedido';
         }
@@ -691,15 +680,20 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     function closeOrderModal() {
-        if (activeEntity && activeEntity.id.startsWith('table-')) {
-            const numInput = document.getElementById('modal-table-number-input');
-            if (numInput) {
-                const newNum = numInput.value.trim();
-                if (newNum) activeEntity.number = newNum;
+        if (activeEntity) {
+            if (activeEntity.id.startsWith('table-')) {
+                const numInput = document.getElementById('modal-table-number-input');
+                if (numInput) {
+                    const newNum = numInput.value.trim();
+                    if (newNum) activeEntity.number = newNum;
+                }
             }
             // Liberar bloqueo de edición activa
             activeEntity.inUseBy = null;
             activeEntity.inUseStart = null;
+            if (typeof saveEntity === 'function') {
+                saveEntity(activeEntity, activeEntity.id.startsWith('table-') ? 'table' : 'barOrder');
+            }
         }
         if (activeEntity && orderBeforeChanges) {
             const name    = activeEntity.id.startsWith('table-') ? `Mesa ${activeEntity.number}` : activeEntity.clientName;
@@ -722,7 +716,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         const titles = {
             deleteTable:     { t: 'Eliminar Mesa',          d: 'Para eliminar la mesa, ingresa la clave.' },
             clearSingleOrder:{ t: 'Limpiar Pedido',         d: 'Para limpiar este pedido, ingresa la clave.' },
-            clearAllOrders:  { t: 'Limpiar Todos los Pedidos', d: 'Para limpiar todos los pedidos, ingresa la clave.' }
+            clearAllOrders:  { t: 'Limpiar Todos los Pedidos', d: 'Para limpiar todos los pedidos, ingresa la clave.' },
+            manageMozos:     { t: 'Gestionar Mozos',        d: 'Se requiere clave de administrador para gestionar mozos.' }
         };
         const info = titles[action] || { t: 'Verificación', d: 'Ingresá la clave.' };
         passwordTitle.textContent       = info.t;
@@ -1124,6 +1119,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     managePricesBtn.addEventListener('click', openPricesModal);
     closePricesModalBtn.addEventListener('click', closePricesModal);
 
+
+
     closeTotalModalBtn.addEventListener('click', () => { totalModal.style.display = 'none'; });
 
     closeGenericDataModalBtn.addEventListener('click', () => { genericDataModal.style.display = 'none'; });
@@ -1131,7 +1128,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     closePrintSingleAccountModalBtn.addEventListener('click', () => { printSingleAccountModal.style.display = 'none'; });
     closePrintSingleAccountFinalBtn.addEventListener('click', () => { printSingleAccountModal.style.display = 'none'; });
 
-    addTableBtn.addEventListener('click', () => {
+    addTableBtn.addEventListener('click', async () => {
         appState.nextTableNumber = appState.tables.length > 0
             ? Math.max(...appState.tables.map(t => parseInt(t.number) || 0)) + 1
             : 1;
@@ -1143,16 +1140,18 @@ document.addEventListener('DOMContentLoaded', async () => {
             order: getNewOrderObject()
         };
         appState.tables.push(newTable);
+        await saveEntity(newTable, 'table');
         saveState();
         renderTables();
     });
 
-    addBarOrderBtn.addEventListener('click', () => {
+    addBarOrderBtn.addEventListener('click', async () => {
         const clientName = barClientNameInput.value.trim();
         if (!clientName) return;
         const newOrder = { id: `bar-${Date.now()}`, clientName, order: getNewOrderObject() };
         appState.barOrders.push(newOrder);
         barClientNameInput.value = '';
+        await saveEntity(newOrder, 'barOrder');
         saveState();
         renderBarOrders();
         openOrderModal(newOrder.id, 'bar');
@@ -1278,7 +1277,10 @@ document.addEventListener('DOMContentLoaded', async () => {
             openPasswordModal('deleteTable');
         } else {
             if (deleteEntityBtn.dataset.confirming === 'true') {
-                appState.barOrders = appState.barOrders.filter(o => o.id !== activeEntity.id);
+                const idToDelete = activeEntity.id;
+                appState.barOrders = appState.barOrders.filter(o => o.id !== idToDelete);
+                if (typeof deleteEntityFromCloud === 'function') deleteEntityFromCloud(idToDelete);
+                activeEntity = null;
                 closeOrderModal();
             } else {
                 deleteEntityBtn.classList.remove('bg-red-600', 'hover:bg-red-700');
@@ -1390,8 +1392,12 @@ document.addEventListener('DOMContentLoaded', async () => {
             return;
         }
         if (actionToConfirm === 'deleteTable') {
-            appState.tables = appState.tables.filter(t => t.id !== activeEntity.id);
-            closePasswordModal(); closeOrderModal();
+            const idToDelete = activeEntity.id;
+            appState.tables = appState.tables.filter(t => t.id !== idToDelete);
+            if (typeof deleteEntityFromCloud === 'function') deleteEntityFromCloud(idToDelete);
+            activeEntity = null;
+            closePasswordModal(); 
+            closeOrderModal();
         } else if (actionToConfirm === 'clearSingleOrder') {
             activeEntity.order = getNewOrderObject();
             activeEntity.isPaid = false;
@@ -1437,6 +1443,29 @@ document.addEventListener('DOMContentLoaded', async () => {
             showModeToast(appState.currentMode, '¡Cierre de Caja General realizado por Mozo 1 exitosamente!');
         }
     });
+
+    window.renderMozoSwitcher = function() {
+        if (!mozoSwitcher) return;
+        if (!appState.mozos || !appState.mozos.length) return;
+        
+        let currentVal = mozoSwitcher.value || appState.currentMozo;
+        mozoSwitcher.innerHTML = '';
+        
+        appState.mozos.forEach(mozoName => {
+            const opt = document.createElement('option');
+            opt.value = mozoName;
+            opt.textContent = mozoName;
+            mozoSwitcher.appendChild(opt);
+        });
+
+        if (Array.from(mozoSwitcher.options).some(o => o.value === currentVal)) {
+            mozoSwitcher.value = currentVal;
+            appState.currentMozo = currentVal;
+        } else {
+            mozoSwitcher.selectedIndex = 0;
+            appState.currentMozo = mozoSwitcher.value;
+        }
+    };
 
 
     function syncPricesFromDOM() {
@@ -1791,7 +1820,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Sin esto, las mesas solo viven en localStorage y nunca llegan a la nube.
 
     modeSwitcher.value        = appState.currentMode;
-    if (mozoSwitcher) mozoSwitcher.value = appState.currentMozo || 'Mozo 1';
+    if (mozoSwitcher) {
+        renderMozoSwitcher();
+        mozoSwitcher.value = appState.currentMozo || 'Mozo 1';
+    }
     kitchenNumberInput.value  = appState.numeroCocina;
     updateUIMode(appState.currentMode);
     pizzaSizeSelect.dispatchEvent(new Event('change'));

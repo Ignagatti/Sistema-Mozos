@@ -25,6 +25,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   updateProductPrice: (data) => ipcRenderer.invoke('update-product-price', data),
   deleteProduct: (data) => ipcRenderer.invoke('delete-product', data),
 
+
+
   // Nuevas funciones granulares para multipantalla
   saveCloudEntity: (data) => ipcRenderer.invoke('save-cloud-entity', data),
   deleteCloudEntity: (data) => ipcRenderer.invoke('delete-cloud-entity', data),
