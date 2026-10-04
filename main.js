@@ -123,7 +123,7 @@ app.whenReady().then(() => {
 
 require('dotenv').config();
 const { Pool } = require('pg');
-const NEON_CONN_STRING = process.env.DATABASE_URL || process.env.NEON_DATABASE_URL || 'postgresql://neondb_owner:npg_DlXN1qQac5bF@ep-royal-breeze-b5v5b7vx-pooler.c-7.us-east-2.aws.neon.tech/neondb?sslmode=verify-full';
+const NEON_CONN_STRING = process.env.DATABASE_URL || process.env.NEON_DATABASE_URL || 'postgresql://neondb_owner:npg_bJ0TN1KSpzqF@ep-royal-breeze-b5v5b7vx-pooler.c-7.us-east-2.aws.neon.tech/neondb?sslmode=verify-full';
 
 const dbPool = new Pool({
   connectionString: NEON_CONN_STRING,
