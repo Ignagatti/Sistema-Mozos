@@ -1841,4 +1841,22 @@ document.addEventListener('DOMContentLoaded', async () => {
             pollCloudState(activeEntity ? activeEntity.id : null);
         }
     }, 1000);
+
+    // ── LÓGICA DE ALERTA DE CONEXIÓN OFFLINE ───────────────────────────────
+    function updateOfflineBanner() {
+        const banner = document.getElementById('offline-warning-banner');
+        if (!banner) return;
+        
+        if (!navigator.onLine) {
+            banner.classList.remove('hidden');
+        } else {
+            banner.classList.add('hidden');
+        }
+    }
+    
+    window.addEventListener('offline', updateOfflineBanner);
+    window.addEventListener('online', updateOfflineBanner);
+    
+    // Comprobar al iniciar
+    updateOfflineBanner();
 });
