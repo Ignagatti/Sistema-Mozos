@@ -94,6 +94,14 @@ const appState = {
     mozos:          ['Mozo 1', 'Mozo 2', 'Mozo 3']
 };
 
+let isCloudOnline = true;
+function setCloudConnectionStatus(isConnected) {
+    isCloudOnline = !!isConnected;
+    if (typeof window !== 'undefined' && typeof window.updateConnectionUI === 'function') {
+        window.updateConnectionUI(isCloudOnline);
+    }
+}
+
 function getNewOrderObject() {
     return {
         pizzaLibreH: 0, pizzaLibreM: 0, pizzaLibreG: 0,
@@ -196,106 +204,112 @@ async function pollCloudState(activeEntityId) {
         try {
             const cloudRes = await window.electronAPI.loadCloudData();
             if (isSyncing) return;
-            if (cloudRes && cloudRes.success && cloudRes.cloudEntities && Array.isArray(cloudRes.cloudEntities)) {
-                let needsRender = false;
-                const loadedTables = [];
-                const loadedBarOrders = [];
-                cloudRes.cloudEntities.forEach(entity => {
-                    if (entity.entity_type === 'table') loadedTables.push(entity.data);
-                    else if (entity.entity_type === 'barOrder') loadedBarOrders.push(entity.data);
-                });
+            if (cloudRes && cloudRes.success) {
+                setCloudConnectionStatus(true);
+                if (cloudRes.cloudEntities && Array.isArray(cloudRes.cloudEntities)) {
+                    let needsRender = false;
+                    const loadedTables = [];
+                    const loadedBarOrders = [];
+                    cloudRes.cloudEntities.forEach(entity => {
+                        if (entity.entity_type === 'table') loadedTables.push(entity.data);
+                        else if (entity.entity_type === 'barOrder') loadedBarOrders.push(entity.data);
+                    });
 
-                // 1. Merge Tables
-                loadedTables.forEach(cloudTable => {
-                    const localIdx = appState.tables.findIndex(t => t.id === cloudTable.id);
-                    if (localIdx === -1) {
-                        if (cloudTable.inUseBy) cloudTable.inUseStart = Date.now();
-                        appState.tables.push(cloudTable);
-                        needsRender = true;
-                    } else {
-                        if (activeEntityId === cloudTable.id) return;
-                        
-                        // Preserve or set local inUseStart since it doesn't come from the DB
-                        if (cloudTable.inUseBy) {
-                            if (cloudTable.inUseBy === appState.tables[localIdx].inUseBy) {
-                                cloudTable.inUseStart = appState.tables[localIdx].inUseStart || Date.now();
-                            } else {
-                                cloudTable.inUseStart = Date.now();
+                    // 1. Merge Tables
+                    loadedTables.forEach(cloudTable => {
+                        const localIdx = appState.tables.findIndex(t => t.id === cloudTable.id);
+                        if (localIdx === -1) {
+                            if (cloudTable.inUseBy) cloudTable.inUseStart = Date.now();
+                            appState.tables.push(cloudTable);
+                            needsRender = true;
+                        } else {
+                            if (activeEntityId === cloudTable.id) return;
+                            
+                            // Preserve or set local inUseStart since it doesn't come from the DB
+                            if (cloudTable.inUseBy) {
+                                if (cloudTable.inUseBy === appState.tables[localIdx].inUseBy) {
+                                    cloudTable.inUseStart = appState.tables[localIdx].inUseStart || Date.now();
+                                } else {
+                                    cloudTable.inUseStart = Date.now();
+                                }
+                            }
+
+                            if (JSON.stringify(appState.tables[localIdx]) !== JSON.stringify(cloudTable)) {
+                                appState.tables[localIdx] = cloudTable;
+                                needsRender = true;
                             }
                         }
-
-                        if (JSON.stringify(appState.tables[localIdx]) !== JSON.stringify(cloudTable)) {
-                            appState.tables[localIdx] = cloudTable;
+                    });
+                    
+                    // 2. Remove local tables deleted in cloud
+                    for (let i = appState.tables.length - 1; i >= 0; i--) {
+                        const t = appState.tables[i];
+                        if (!loadedTables.find(ct => ct.id === t.id)) {
+                            if (activeEntityId === t.id) continue;
+                            appState.tables.splice(i, 1);
                             needsRender = true;
                         }
                     }
-                });
-                
-                // 2. Remove local tables deleted in cloud
-                for (let i = appState.tables.length - 1; i >= 0; i--) {
-                    const t = appState.tables[i];
-                    if (!loadedTables.find(ct => ct.id === t.id)) {
-                        if (activeEntityId === t.id) continue;
-                        appState.tables.splice(i, 1);
-                        needsRender = true;
-                    }
-                }
 
-                // 3. Merge Bar Orders
-                loadedBarOrders.forEach(cloudBar => {
-                    const localIdx = appState.barOrders.findIndex(t => t.id === cloudBar.id);
-                    if (localIdx === -1) {
-                        if (cloudBar.inUseBy) cloudBar.inUseStart = Date.now();
-                        appState.barOrders.push(cloudBar);
-                        needsRender = true;
-                    } else {
-                        if (activeEntityId === cloudBar.id) return;
-                        
-                        // Preserve or set local inUseStart since it doesn't come from the DB
-                        if (cloudBar.inUseBy) {
-                            if (cloudBar.inUseBy === appState.barOrders[localIdx].inUseBy) {
-                                cloudBar.inUseStart = appState.barOrders[localIdx].inUseStart || Date.now();
-                            } else {
-                                cloudBar.inUseStart = Date.now();
+                    // 3. Merge Bar Orders
+                    loadedBarOrders.forEach(cloudBar => {
+                        const localIdx = appState.barOrders.findIndex(t => t.id === cloudBar.id);
+                        if (localIdx === -1) {
+                            if (cloudBar.inUseBy) cloudBar.inUseStart = Date.now();
+                            appState.barOrders.push(cloudBar);
+                            needsRender = true;
+                        } else {
+                            if (activeEntityId === cloudBar.id) return;
+                            
+                            // Preserve or set local inUseStart since it doesn't come from the DB
+                            if (cloudBar.inUseBy) {
+                                if (cloudBar.inUseBy === appState.barOrders[localIdx].inUseBy) {
+                                    cloudBar.inUseStart = appState.barOrders[localIdx].inUseStart || Date.now();
+                                } else {
+                                    cloudBar.inUseStart = Date.now();
+                                }
+                            }
+
+                            if (JSON.stringify(appState.barOrders[localIdx]) !== JSON.stringify(cloudBar)) {
+                                appState.barOrders[localIdx] = cloudBar;
+                                needsRender = true;
                             }
                         }
+                    });
 
-                        if (JSON.stringify(appState.barOrders[localIdx]) !== JSON.stringify(cloudBar)) {
-                            appState.barOrders[localIdx] = cloudBar;
+                    // 4. Remove local bar orders deleted in cloud
+                    for (let i = appState.barOrders.length - 1; i >= 0; i--) {
+                        const t = appState.barOrders[i];
+                        if (!loadedBarOrders.find(ct => ct.id === t.id)) {
+                            if (activeEntityId === t.id) continue;
+                            appState.barOrders.splice(i, 1);
                             needsRender = true;
                         }
                     }
-                });
 
-                // 4. Remove local bar orders deleted in cloud
-                for (let i = appState.barOrders.length - 1; i >= 0; i--) {
-                    const t = appState.barOrders[i];
-                    if (!loadedBarOrders.find(ct => ct.id === t.id)) {
-                        if (activeEntityId === t.id) continue;
-                        appState.barOrders.splice(i, 1);
-                        needsRender = true;
+                    if (needsRender) {
+                        lastSavedTablesStr = JSON.stringify(appState.tables);
+                        lastSavedBarOrdersStr = JSON.stringify(appState.barOrders);
+                        localStorage.setItem('restaurantState', JSON.stringify({
+                            tables: appState.tables,
+                            barOrders: appState.barOrders,
+                            prices: appState.prices,
+                            nextTableNumber: appState.nextTableNumber,
+                            currentMode: appState.currentMode,
+                            currentMozo: appState.currentMozo,
+                            numeroCocina: appState.numeroCocina,
+                            genericData: appState.genericData,
+                            offlineQueue: appState.offlineQueue
+                        }));
+                        if (typeof window.renderAll === 'function') window.renderAll();
                     }
                 }
-
-                if (needsRender) {
-                    lastSavedTablesStr = JSON.stringify(appState.tables);
-                    lastSavedBarOrdersStr = JSON.stringify(appState.barOrders);
-                    localStorage.setItem('restaurantState', JSON.stringify({
-                        tables: appState.tables,
-                        barOrders: appState.barOrders,
-                        prices: appState.prices,
-                        nextTableNumber: appState.nextTableNumber,
-                        currentMode: appState.currentMode,
-                        currentMozo: appState.currentMozo,
-                        numeroCocina: appState.numeroCocina,
-                        genericData: appState.genericData,
-                        offlineQueue: appState.offlineQueue
-                    }));
-                    if (typeof window.renderAll === 'function') window.renderAll();
-                }
+            } else {
+                setCloudConnectionStatus(false);
             }
         } catch (e) {
             console.error('Polling error', e);
+            setCloudConnectionStatus(false);
         }
     }
 }
@@ -470,9 +484,13 @@ async function loadState() {
                     }
                 }
 
+                setCloudConnectionStatus(true);
+            } else {
+                setCloudConnectionStatus(false);
             }
         } catch (err) {
             console.error('Error sincronizando con Neon DB en la nube:', err);
+            setCloudConnectionStatus(false);
         }
     }
 

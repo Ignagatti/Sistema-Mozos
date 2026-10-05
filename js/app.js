@@ -1842,21 +1842,61 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }, 1000);
 
-    // ── LÓGICA DE ALERTA DE CONEXIÓN OFFLINE ───────────────────────────────
-    function updateOfflineBanner() {
+    // ── LÓGICA DE ALERTA DE CONEXIÓN OFFLINE / INTERNET ───────────────────────────────
+    function updateConnectionUI(isOnline) {
         const banner = document.getElementById('offline-warning-banner');
-        if (!banner) return;
-        
-        if (!navigator.onLine) {
-            banner.classList.remove('hidden');
+        const bannerText = document.getElementById('offline-warning-text');
+        const badge = document.getElementById('connection-status-badge');
+        const dot = document.getElementById('connection-status-dot');
+        const text = document.getElementById('connection-status-text');
+
+        const hasWifi = typeof navigator !== 'undefined' && navigator.onLine;
+
+        if (isOnline) {
+            if (banner) banner.classList.add('hidden');
+            if (badge) {
+                badge.className = "inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300 shadow-sm";
+                badge.title = "Conectado a la base de datos en la nube";
+            }
+            if (dot) dot.className = "w-2 h-2 rounded-full bg-emerald-500 animate-pulse";
+            if (text) text.textContent = "Conectado";
         } else {
-            banner.classList.add('hidden');
+            if (banner) {
+                banner.classList.remove('hidden');
+                if (bannerText) {
+                    if (!hasWifi) {
+                        bannerText.textContent = "¡SIN CONEXIÓN DE RED (Wi-Fi Desconectado)! Tenga cuidado al editar. SOLO EL MOZO 1 (PC Principal) debe editar en este momento para evitar pérdida de datos.";
+                    } else {
+                        bannerText.textContent = "¡SIN INTERNET / NUBE! (Wi-Fi conectado, pero sin acceso a Internet). Tenga cuidado al editar. SOLO EL MOZO 1 (PC Principal) debe editar en este momento para evitar pérdida de datos.";
+                    }
+                }
+            }
+            if (badge) {
+                badge.className = "inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800 border border-red-300 shadow-sm animate-pulse";
+                badge.title = hasWifi ? "Wi-Fi conectado pero sin acceso a Internet" : "Sin conexión a Wi-Fi ni Internet";
+            }
+            if (dot) dot.className = "w-2 h-2 rounded-full bg-red-600";
+            if (text) text.textContent = hasWifi ? "Sin Internet" : "Offline";
         }
     }
-    
-    window.addEventListener('offline', updateOfflineBanner);
-    window.addEventListener('online', updateOfflineBanner);
-    
-    // Comprobar al iniciar
-    updateOfflineBanner();
+
+    window.updateConnectionUI = updateConnectionUI;
+
+    window.addEventListener('offline', () => {
+        if (typeof setCloudConnectionStatus === 'function') setCloudConnectionStatus(false);
+        else updateConnectionUI(false);
+    });
+
+    window.addEventListener('online', () => {
+        if (typeof pollCloudState === 'function') {
+            pollCloudState(activeEntity ? activeEntity.id : null);
+        }
+    });
+
+    // Comprobar estado inicial
+    if (typeof isCloudOnline !== 'undefined') {
+        updateConnectionUI(isCloudOnline);
+    } else {
+        updateConnectionUI(navigator.onLine);
+    }
 });

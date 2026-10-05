@@ -129,13 +129,19 @@
         <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 inline-block shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 5.636a9 9 0 010 12.728m-2.828-9.904a5 5 0 010 7.072m-2.828-4.242a1 1 0 010 1.414m-9.9-1.414l15.556 15.556m-1.414-1.414A9 9 0 015.636 5.636M18.364 5.636l-1.414 1.414" />
         </svg>
-        <span class="text-sm md:text-base">¡SIN CONEXIÓN A INTERNET! Tenga cuidado al editar. SOLO EL MOZO 1 (PC Principal) debe editar en este momento para evitar pérdida de datos.</span>
+        <span id="offline-warning-text" class="text-sm md:text-base">¡SIN CONEXIÓN A INTERNET! Tenga cuidado al editar. SOLO EL MOZO 1 (PC Principal) debe editar en este momento para evitar pérdida de datos.</span>
     </div>
 
     <div class="flex flex-col md:flex-row h-screen pt-0" id="main-container">
         <!-- Panel de Controles -->
         <div class="w-full md:w-72 bg-white p-4 shadow-lg overflow-y-auto flex-shrink-0">
-            <h1 class="text-2xl font-bold text-gray-900 mb-4">Gestión del Club</h1>
+            <div class="flex items-center justify-between mb-4">
+                <h1 class="text-xl font-bold text-gray-900">Gestión del Club</h1>
+                <div id="connection-status-badge" class="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300 shadow-sm" title="Conectado a la base de datos en la nube">
+                    <span id="connection-status-dot" class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                    <span id="connection-status-text">Conectado</span>
+                </div>
+            </div>
             
             <div class="mb-4">
                 <label for="kitchen-number-input" class="block text-sm font-medium text-gray-700 mb-1">N° de Cocina (WhatsApp)</label>
