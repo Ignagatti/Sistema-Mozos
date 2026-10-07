@@ -33,6 +33,12 @@
       "**/*",
       "!dist/*",
       "!tests/*"
+    ],
+    "extraResources": [
+      {
+        "from": ".env",
+        "to": ".env"
+      }
     ]
   },
   "devDependencies": {

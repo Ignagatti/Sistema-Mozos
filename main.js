@@ -121,10 +121,32 @@ app.whenReady().then(() => {
     }
   });
 
-require('dotenv').config();
-const { Pool } = require('pg');
-const NEON_CONN_STRING = process.env.DATABASE_URL || process.env.NEON_DATABASE_URL || 'postgresql://neondb_owner:npg_bJ0TN1KSpzqF@ep-royal-breeze-b5v5b7vx-pooler.c-7.us-east-2.aws.neon.tech/neondb?sslmode=verify-full';
+// Configuración y conexión segura a Neon Cloud PostgreSQL
+const fsSync = require('fs');
+const dotenv = require('dotenv');
 
+// Se busca el archivo .env primero en el directorio de recursos de la app instalada (resourcesPath) y luego en el directorio local de desarrollo
+const envPathProd = path.join(process.resourcesPath, '.env');
+const envPathDev = path.join(__dirname, '.env');
+
+if (fsSync.existsSync(envPathProd)) {
+  dotenv.config({ path: envPathProd });
+} else if (fsSync.existsSync(envPathDev)) {
+  dotenv.config({ path: envPathDev });
+} else {
+  dotenv.config();
+}
+
+const { Pool } = require('pg');
+
+// Se obtiene la cadena de conexión exclusivamente desde las variables de entorno (.env)
+const NEON_CONN_STRING = process.env.NEON_DATABASE_URL || process.env.DATABASE_URL;
+
+if (!NEON_CONN_STRING) {
+  console.warn('ADVERTENCIA: No se encontró la URL de conexión a Neon DB en variables de entorno (consulte el archivo .env).');
+}
+
+// Pool de conexiones asíncronas a PostgreSQL en Neon DB
 const dbPool = new Pool({
   connectionString: NEON_CONN_STRING,
   max: 15,
@@ -265,6 +287,7 @@ ipcMain.handle('close-global-shift', async () => {
   }
 });
 
+// Maneja el guardado o actualización individual de mesas o pedidos de barra en Neon Cloud DB
 ipcMain.handle('save-cloud-entity', async (event, { entity, type }) => {
   if (!entity || !entity.id || !type) return { success: false, error: 'Invalid entity data' };
   try {
@@ -312,11 +335,12 @@ ipcMain.handle('save-cloud-entity', async (event, { entity, type }) => {
     }
     return { success: true };
   } catch (err) {
-    console.error('Error saving entity in Neon DB:', err);
+    console.error('Error guardando entidad en Neon DB:', err);
     return { success: false, error: err.message };
   }
 });
 
+// Maneja la eliminación de una entidad específica (mesa o pedido de barra) en Neon DB
 ipcMain.handle('delete-cloud-entity', async (event, { id }) => {
   if (!id) return { success: false, error: 'Entity id required' };
   try {
@@ -327,18 +351,19 @@ ipcMain.handle('delete-cloud-entity', async (event, { id }) => {
     }
     return { success: true };
   } catch (err) {
-    console.error('Error deleting entity from Neon DB:', err);
+    console.error('Error eliminando entidad en Neon DB:', err);
     return { success: false, error: err.message };
   }
 });
 
+// Maneja la limpieza general de todas las entidades en Neon DB
 ipcMain.handle('clear-all-entities', async () => {
   try {
     await dbPool.query('TRUNCATE TABLE mesas;');
     await dbPool.query('TRUNCATE TABLE pedidos_barra;');
     return { success: true };
   } catch (err) {
-    console.error('Error clearing entities in Neon DB:', err);
+    console.error('Error limpiando entidades en Neon DB:', err);
     return { success: false, error: err.message };
   }
 });
