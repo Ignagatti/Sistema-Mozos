@@ -6,7 +6,6 @@ function createWindow() {
   const win = new BrowserWindow({
     width: 1200,
     height: 800,
-    fullscreen: true,
     autoHideMenuBar: true,
     icon: path.join(__dirname, 'assets', 'logo_rivera.ico'),
     webPreferences: {
@@ -18,6 +17,7 @@ function createWindow() {
     }
   });
 
+  win.maximize(); // Abre la ventana maximizada
   win.loadFile('index.html');
   // win.webContents.openDevTools(); // Descomentar para depurar
 }

@@ -1053,14 +1053,21 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     if (changeDayClearBtn) {
         changeDayClearBtn.addEventListener('click', () => {
+            if (appState.currentMozo !== 'Mozo 1') {
+                showSystemAlert('Permiso Denegado: Solo el "Mozo 1" (Encargado) tiene permisos para vaciar todas las mesas.', 'Permiso Denegado');
+                closeChangeDayModal();
+                return;
+            }
             if (!pendingNewMode) return;
             appState.currentMode = pendingNewMode;
-            // Limpiar los pedidos del día anterior y resetear estado de pago en mesas y barra
+            // Limpiar los pedidos del día anterior y resetear estado de pago (verde a azul original) en mesas y barra
             appState.tables.forEach(t => {
                 t.order = getNewOrderObject();
                 t.isPaid = false;
                 t.paidAmount = 0;
                 t.tipAmount = 0;
+                t.mozo_asignado = null;
+                t.inUseBy = null;
             });
             appState.barOrders = [];
 
@@ -1068,7 +1075,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             saveState();
             renderAll();
             closeChangeDayModal();
-            showModeToast(appState.currentMode, '¡Pedidos del día anterior limpiados para la nueva jornada!');
+            showModeToast(appState.currentMode, '¡Pedidos del día anterior limpiados para la nueva jornada por Mozo 1!');
         });
     }
 
