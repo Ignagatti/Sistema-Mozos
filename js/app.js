@@ -1410,6 +1410,10 @@ document.addEventListener('DOMContentLoaded', async () => {
             activeEntity.isPaid = false;
             activeEntity.paidAmount = 0;
             activeEntity.tipAmount = 0;
+            activeEntity.mozo_asignado = null;
+            activeEntity.inUseBy = null;
+            saveState();
+            renderAll();
             updateOrderModalUI();
             closePasswordModal();
         } else if (actionToConfirm === 'clearAllOrders') {

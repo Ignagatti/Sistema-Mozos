@@ -137,25 +137,29 @@ if (fsSync.existsSync(envPathProd)) {
   dotenv.config();
 }
 
-const { Pool } = require('pg');
+let dbPool = null;
+try {
+  const { Pool } = require('pg');
+  // Se obtiene la cadena de conexión exclusivamente desde las variables de entorno (.env)
+  const NEON_CONN_STRING = process.env.NEON_DATABASE_URL || process.env.DATABASE_URL;
 
-// Se obtiene la cadena de conexión exclusivamente desde las variables de entorno (.env)
-const NEON_CONN_STRING = process.env.NEON_DATABASE_URL || process.env.DATABASE_URL;
-
-if (!NEON_CONN_STRING) {
-  console.warn('ADVERTENCIA: No se encontró la URL de conexión a Neon DB en variables de entorno (consulte el archivo .env).');
+  if (NEON_CONN_STRING) {
+    dbPool = new Pool({
+      connectionString: NEON_CONN_STRING,
+      max: 15,
+      idleTimeoutMillis: 30000,
+      connectionTimeoutMillis: 5000
+    });
+  } else {
+    console.warn('ADVERTENCIA: No se encontró la URL de conexión a Neon DB en variables de entorno (consulte el archivo .env).');
+  }
+} catch (err) {
+  console.error('Error inicializando pool de PostgreSQL:', err);
 }
-
-// Pool de conexiones asíncronas a PostgreSQL en Neon DB
-const dbPool = new Pool({
-  connectionString: NEON_CONN_STRING,
-  max: 15,
-  idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 5000
-});
 
 // Maneja la carga de datos desde Neon Cloud DB
 ipcMain.handle('load-cloud-data', async () => {
+  if (!dbPool) return { success: false, error: 'Database not initialized' };
   try {
     const snapshotRes = await dbPool.query("SELECT snapshot_data FROM app_state_snapshots WHERE id = 'current' LIMIT 1;");
     const snapshot = snapshotRes.rows.length > 0 ? snapshotRes.rows[0].snapshot_data : null;
@@ -276,10 +280,21 @@ ipcMain.handle('delete-product', async (event, { productName }) => {
 
 // Maneja el Cierre de Caja General y cambio de jornada global en Neon DB
 ipcMain.handle('close-global-shift', async () => {
+  if (!dbPool) return { success: false, error: 'Database pool not initialized' };
   try {
+    // 1. Resetear todas las mesas a su estado original (sin pedidos, is_paid=false)
+    await dbPool.query(
+      "UPDATE mesas SET order_data = '{}', is_paid = false, paid_amount = 0, tip_amount = 0, device_id = NULL, updated_at = CURRENT_TIMESTAMP;"
+    );
+    // 2. Limpiar todos los pedidos de barra
+    await dbPool.query(
+      "TRUNCATE TABLE pedidos_barra;"
+    );
+    // 3. Actualizar estado de jornada activa en caso de existir la tabla
     await dbPool.query(
       "UPDATE mesas_activas SET estado = 'cerrada', mozo_asignado = NULL, ultima_actualizacion = CURRENT_TIMESTAMP;"
-    );
+    ).catch(err => console.log('Tabla opcional mesas_activas:', err.message));
+
     return { success: true };
   } catch (err) {
     console.error('Error cerrando jornada global en Neon DB:', err);
